@@ -19,7 +19,7 @@ print()
 
 soda_array = soda.to_array(dim='VARIABLE')
 soda_smaller = np.array(soda_array[:,:,:,:,:,:])
-soda_smaller = soda_smaller[2,:,0,:,::5,::5] # Drop the bnds dimension and the other two variables; take every 5th longitude and latitude.
+soda_smaller = soda_smaller[2,:,0,:,::20,::20] # Drop the bnds dimension and the other two variables; take every 20th longitude and latitude.
 soda_smaller = np.squeeze(soda_smaller, axis=0)
 
 print("Shape of resized SODA:")
