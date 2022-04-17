@@ -72,8 +72,8 @@ for lag in [0, 1, 2, 3, 6, 12, 23]:
   plt.title('Correlations Between SSTA Time Series at (177.75, -34.75) and All Nodes with ' + str(lag) + '-Month Lag', fontsize=12)
   plt.xlabel('Longitude')
   plt.ylabel('Latitude')
-  plt.savefig(out_path + 'lag_' + str(lag) + '_correlation_plot.png')
+  plt.savefig(out_path + 'plot_lag_' + str(lag) + '_correlation.png')
 
-  print("Save the correlation plot.")
+  print("Save the correlation plots.")
   print("--------------------")
   print()

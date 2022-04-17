@@ -1,5 +1,6 @@
 import numpy as np
 from numpy import load
+import random
 
 import torch
 import torch.nn as nn
@@ -14,9 +15,12 @@ from dgl import save_graphs
 from dgl.dataloading import GraphDataLoader
 from torch.utils.data.sampler import SubsetRandomSampler, SequentialSampler
 
-import random
-
 import time
+
+from sklearn.metrics import mean_squared_error
+
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 
 # GCN configurations
 
@@ -33,10 +37,11 @@ batch_size = 64
 num_sample = 1677 # max: node_features.shape[1]-window_size-lead_time+1
 num_train_epoch = 100
 
-# Transform the graphs into the DGL forms.
-
 data_path = 'data/'
-models_path = 'models/'
+models_path = 'out/'
+out_path = 'out/'
+
+# Transform the graphs into the DGL forms.
 
 node_features = load(data_path + 'node_features.npy')
 edge_features = load(data_path + 'edge_features.npy')
@@ -214,20 +219,18 @@ for epoch in range(num_train_epoch):
         optimizer.step()
         losses.append(loss.cpu().detach().numpy())
     print('Training loss:', sum(losses) / len(losses))
-    
-    sum_mse = 0
-    num_tests = 0
+
+    preds = []
+    ys = []
     for batched_graph, y in test_dataloader:
         pred = model(batched_graph, batched_graph.ndata['feat'])
-        sum_mse += (pred - y) ** 2
-        num_tests += 1
-    val_mse = sum_mse / num_tests
-    print('Validation MSE:', val_mse.cpu().detach().numpy())
+        preds.append(pred.cpu().detach().numpy().squeeze(axis=0))
+        ys.append(y.cpu().detach().numpy().squeeze(axis=0))
+    val_rmse = mean_squared_error(np.array(preds), np.array(ys), squared=True)
+    print('Validation RMSE:', val_rmse)
 
     print("----------")
     print()
-
-torch.save(model.state_dict(), models_path + 'model_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(num_train_epoch) + '.pt')
 
 # End time
 stop = time.time()
@@ -236,20 +239,53 @@ print(f'Complete training. Time spent: {stop - start} seconds.')
 print("----------")
 print()
 
+#torch.save(model.state_dict(), models_path + 'model_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(num_train_epoch) + '.pt')
 
-print("Save the model in a PT file.")
+#print("Save the model in a PT file.")
+#print("----------")
+#print()
+
+torch.save({
+            'epoch': num_train_epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss': loss
+            }, models_path + 'checkpoint_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(num_train_epoch) + '.tar')
+
+print("Save the checkpoint in a TAR file.")
 print("----------")
 print()
 
-sum_mse = 0
-num_tests = 0
+preds = []
+ys = []
 for batched_graph, y in test_dataloader:
     pred = model(batched_graph, batched_graph.ndata['feat'])
-    print('Observed:', y.cpu().detach().numpy(), '; predicted:', pred.cpu().detach().numpy())
-    sum_mse += (pred - y) ** 2
-    num_tests += 1
+    print('Observed:', y.cpu().detach().numpy().squeeze(axis=0), '; predicted:', pred.cpu().detach().numpy().squeeze(axis=0))
+    preds.append(pred.cpu().detach().numpy().squeeze(axis=0))
+    ys.append(y.cpu().detach().numpy().squeeze(axis=0))
 
-test_mse = sum_mse / num_tests
-print('Final validation / test MSE:', test_mse.cpu().detach().numpy())
+test_mse = mean_squared_error(np.array(preds), np.array(ys), squared=False)
+test_rmse = mean_squared_error(np.array(preds), np.array(ys), squared=True)
+
+print("----------")
+print()
+
+print('Final validation / test RMSE:', test_rmse)
+print("----------")
+print()
+
+fig, ax = plt.subplots(figsize=(12, 8))
+plt.xlabel('Month')
+plt.ylabel('SSTA')
+plt.title('GNN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(num_train_epoch), fontsize=12)
+blue_patch = mpatches.Patch(color='blue', label='Predicted')
+red_patch = mpatches.Patch(color='red', label='Observed')
+ax.legend(handles=[blue_patch, red_patch])
+month = np.arange(0, len(ys), 1, dtype=int)
+ax.plot(month, np.array(preds), 'o', color='blue')
+ax.plot(month, np.array(ys), 'o', color='red')
+plt.savefig(out_path + 'plot_GNN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(num_train_epoch) + '.png')
+
+print("Save the observed vs. predicted plot.")
 print("--------------------")
 print()
