@@ -24,7 +24,7 @@ x = np.transpose(node_features)
 y = y[lead_time:]
 x = x[:len(x)-lead_time]
 
-x_train, x_test, y_train, y_test = train_test_split(x, y, train_size=train_split)
+x_train, x_test, y_train, y_test = train_test_split(x, y, train_size=train_split, shuffle=False)
 
 # Train a multiple linear regression model.
 
@@ -39,7 +39,7 @@ print()
 pred = reg.predict(x_test)
 
 for i in range(len(pred)):
-  print('Observed:', y[i], '; predicted:', pred[i])
+  print('Observed:', y_test[i], '; predicted:', pred[i])
 
 print("----------")
 print()
@@ -54,14 +54,14 @@ print()
 fig, ax = plt.subplots(figsize=(12, 8))
 plt.xlabel('Month')
 plt.ylabel('SSTA')
-plt.title('LR_SSTAGraphDataset_windowsize_3_leadtime_1_numsample_1677_trainsplit_0.8', fontsize=12)
+plt.title('LR_SSTAGraphDataset_windowsize_3_leadtime_1_numsample_1679_trainsplit_0.8_RMSE_' + str(round(test_rmse, 4)), fontsize=12)
 blue_patch = mpatches.Patch(color='blue', label='Predicted')
 red_patch = mpatches.Patch(color='red', label='Observed')
 ax.legend(handles=[blue_patch, red_patch])
 month = np.arange(0, len(y_test), 1, dtype=int)
 ax.plot(month, pred, 'o', color='blue')
 ax.plot(month, y_test, 'o', color='red')
-plt.savefig(out_path + 'plot_LR_SSTAGraphDataset_windowsize_3_leadtime_1_numsample_1677_trainsplit_0.8.png')
+plt.savefig(out_path + 'plot_LR_SSTAGraphDataset_windowsize_3_leadtime_1_numsample_1679_trainsplit_0.8.png')
 
 print("Save the observed vs. predicted plot.")
 print("--------------------")

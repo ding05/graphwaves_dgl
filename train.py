@@ -35,7 +35,7 @@ momentum = 0.9
 weight_decay = 0.0001
 batch_size = 64
 num_sample = 1677 # max: node_features.shape[1]-window_size-lead_time+1
-num_train_epoch = 100
+num_train_epoch = 99
 
 data_path = 'data/'
 models_path = 'out/'
@@ -135,16 +135,9 @@ print()
 num_examples = len(dataset)
 num_train = int(num_examples * train_split)
 
-# Random sampler
-#train_sampler = SubsetRandomSampler(torch.arange(num_train))
-#test_sampler = SubsetRandomSampler(torch.arange(num_train, num_examples))
-
 # Sequential sampler
-train_sampler = SequentialSampler(torch.arange(num_train))
-test_sampler = SequentialSampler(torch.arange(num_train, num_examples))
-
-train_dataloader = GraphDataLoader(dataset, sampler=train_sampler, batch_size=batch_size, drop_last=False)
-test_dataloader = GraphDataLoader(dataset, sampler=test_sampler, batch_size=1, drop_last=False)
+train_dataloader = GraphDataLoader(dataset, sampler=torch.arange(num_train), batch_size=batch_size, drop_last=False)
+test_dataloader = GraphDataLoader(dataset, sampler=torch.arange(num_train, num_examples), batch_size=1, drop_last=False)
 
 it = iter(train_dataloader)
 batch = next(it)
@@ -194,7 +187,7 @@ class GCN(nn.Module):
 # Train the GCN.
 
 model = GCN(window_size, 200, 1)
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate) #momentum=momentum, weight_decay=weight_decay
 loss_f = nn.MSELoss()
 
 print("Start training.")
@@ -277,7 +270,7 @@ print()
 fig, ax = plt.subplots(figsize=(12, 8))
 plt.xlabel('Month')
 plt.ylabel('SSTA')
-plt.title('GNN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(num_train_epoch), fontsize=12)
+plt.title('GNN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(epoch) + '_RMSE_' + str(round(test_rmse, 4)), fontsize=12)
 blue_patch = mpatches.Patch(color='blue', label='Predicted')
 red_patch = mpatches.Patch(color='red', label='Observed')
 ax.legend(handles=[blue_patch, red_patch])

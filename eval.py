@@ -129,11 +129,8 @@ dataset = SSTAGraphDataset()
 num_examples = len(dataset)
 num_train = int(num_examples * train_split)
 
-train_sampler = SequentialSampler(torch.arange(num_train))
-test_sampler = SequentialSampler(torch.arange(num_train, num_examples))
-
-train_dataloader = GraphDataLoader(dataset, sampler=train_sampler, batch_size=batch_size, drop_last=False)
-test_dataloader = GraphDataLoader(dataset, sampler=test_sampler, batch_size=1, drop_last=False)
+train_dataloader = GraphDataLoader(dataset, sampler=torch.arange(num_train), batch_size=batch_size, drop_last=False)
+test_dataloader = GraphDataLoader(dataset, sampler=torch.arange(num_train, num_examples), batch_size=1, drop_last=False)
 
 # Test the model.
 
@@ -158,7 +155,7 @@ print()
 fig, ax = plt.subplots(figsize=(12, 8))
 plt.xlabel('Month')
 plt.ylabel('SSTA')
-plt.title('GNN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(epoch), fontsize=12)
+plt.title('GNN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(epoch) + '_RMSE_' + str(round(test_rmse, 4)), fontsize=12)
 blue_patch = mpatches.Patch(color='blue', label='Predicted')
 red_patch = mpatches.Patch(color='red', label='Observed')
 ax.legend(handles=[blue_patch, red_patch])
