@@ -27,15 +27,15 @@ import matplotlib.patches as mpatches
 GCN_structure = ['', '']
 window_size = 3
 train_split = 0.8
-lead_time = 1
+lead_time = 23
 loss_function = 'MSE'
 optimizer = 'SGD' # Adam
 learning_rate = 0.05
 momentum = 0.9
 weight_decay = 0.0001
 batch_size = 64
-num_sample = 1677 # max: node_features.shape[1]-window_size-lead_time+1
-num_train_epoch = 99
+num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
+num_train_epoch = 50
 
 data_path = 'data/'
 models_path = 'out/'
@@ -113,7 +113,7 @@ class SSTAGraphDataset(DGLDataset):
           graph_temp.edata['w'] = graph.edata['w']
           self.graphs.append(graph_temp)
           
-          y_temp = y[i+window_size-lead_time+1]
+          y_temp = y[i+window_size+lead_time-1]
           self.ys.append(y_temp)
 
     def __getitem__(self, i):
@@ -187,7 +187,7 @@ class GCN(nn.Module):
 # Train the GCN.
 
 model = GCN(window_size, 200, 1)
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate) #momentum=momentum, weight_decay=weight_decay
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
 loss_f = nn.MSELoss()
 
 print("Start training.")
@@ -219,8 +219,8 @@ for epoch in range(num_train_epoch):
         pred = model(batched_graph, batched_graph.ndata['feat'])
         preds.append(pred.cpu().detach().numpy().squeeze(axis=0))
         ys.append(y.cpu().detach().numpy().squeeze(axis=0))
-    val_rmse = mean_squared_error(np.array(preds), np.array(ys), squared=True)
-    print('Validation RMSE:', val_rmse)
+    val_mse = mean_squared_error(np.array(ys), np.array(preds), squared=True)
+    print('Validation MSE:', val_mse)
 
     print("----------")
     print()
@@ -248,6 +248,8 @@ torch.save({
 print("Save the checkpoint in a TAR file.")
 print("----------")
 print()
+
+# Test the model.
 
 preds = []
 ys = []

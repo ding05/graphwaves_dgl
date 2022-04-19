@@ -114,7 +114,7 @@ class SSTAGraphDataset(DGLDataset):
           graph_temp.edata['w'] = graph.edata['w']
           self.graphs.append(graph_temp)
           
-          y_temp = y[i+window_size-lead_time+1]
+          y_temp = y[i+window_size+lead_time-1]
           self.ys.append(y_temp)
 
     def __getitem__(self, i):
