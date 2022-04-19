@@ -24,17 +24,17 @@ pred = y[num_train:-lead_time]
 
 # Test the model.
 
-test_mse = mean_squared_error(pred, y_test, squared=False)
-test_rmse = mean_squared_error(pred, y_test, squared=True)
+test_mse = mean_squared_error(y_test, pred, squared=True)
+test_rmse = mean_squared_error(y_test, pred, squared=False)
 
-print('Test RMSE:', test_rmse)
+print('Test MSE:', test_mse)
 print("----------")
 print()
 
 fig, ax = plt.subplots(figsize=(12, 8))
 plt.xlabel('Month')
 plt.ylabel('SSTA')
-plt.title('Persist_SSTAGraphDataset_leadtime_1_numsample_1679_trainsplit_0.8_RMSE_' + str(round(test_rmse, 4)), fontsize=12)
+plt.title('Persist_SSTAGraphDataset_leadtime_1_numsample_1679_trainsplit_0.8_MSE_' + str(round(test_mse, 4)), fontsize=12)
 blue_patch = mpatches.Patch(color='blue', label='Predicted')
 red_patch = mpatches.Patch(color='red', label='Observed')
 ax.legend(handles=[blue_patch, red_patch])

@@ -142,20 +142,20 @@ for batched_graph, y in test_dataloader:
     preds.append(pred.cpu().detach().numpy().squeeze(axis=0))
     ys.append(y.cpu().detach().numpy().squeeze(axis=0))
 
-test_mse = mean_squared_error(np.array(preds), np.array(ys), squared=False)
-test_rmse = mean_squared_error(np.array(preds), np.array(ys), squared=True)
+test_mse = mean_squared_error(np.array(ys), np.array(preds), squared=True)
+test_rmse = mean_squared_error(np.array(ys), np.array(preds), squared=False)
 
 print("----------")
 print()
 
-print('Final validation / test RMSE:', test_rmse)
+print('Final validation / test MSE:', test_mse)
 print("----------")
 print()
 
 fig, ax = plt.subplots(figsize=(12, 8))
 plt.xlabel('Month')
 plt.ylabel('SSTA')
-plt.title('GNN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(epoch) + '_RMSE_' + str(round(test_rmse, 4)), fontsize=12)
+plt.title('GNN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(epoch) + '_MSE_' + str(round(test_rmse, 4)), fontsize=12)
 blue_patch = mpatches.Patch(color='blue', label='Predicted')
 red_patch = mpatches.Patch(color='red', label='Observed')
 ax.legend(handles=[blue_patch, red_patch])
