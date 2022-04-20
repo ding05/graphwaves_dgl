@@ -30,7 +30,7 @@ train_split = 0.8
 lead_time = 23
 loss_function = 'MSE'
 optimizer = 'SGD' # Adam
-learning_rate = 0.05
+learning_rate = 0.01 # 0.05
 momentum = 0.9
 weight_decay = 0.0001
 batch_size = 64
@@ -272,7 +272,7 @@ print()
 fig, ax = plt.subplots(figsize=(12, 8))
 plt.xlabel('Month')
 plt.ylabel('SSTA')
-plt.title('GNN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(epoch) + '_MSE_' + str(round(test_rmse, 4)), fontsize=12)
+plt.title('GNN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(epoch) + '_MSE_' + str(round(test_mse, 4)), fontsize=12)
 blue_patch = mpatches.Patch(color='blue', label='Predicted')
 red_patch = mpatches.Patch(color='red', label='Observed')
 ax.legend(handles=[blue_patch, red_patch])
