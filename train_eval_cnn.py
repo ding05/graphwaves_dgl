@@ -34,7 +34,7 @@ models_path = 'out/'
 out_path = 'out/'
 
 """
-# Process the dataset.
+# If running this script for the first time, process the dataset.
 
 soda = xr.open_dataset('data/soda_224_pt_l5.nc', decode_times=False)
 
@@ -60,21 +60,10 @@ y = y.squeeze(axis=1)
 # Turn NAs into 0.
 grids[np.isnan(grids)] = 0
 
-#grids_window_size = []
-#y_window_size = []
 dataset = []
 for i in range(len(y)-window_size-lead_time):
-  #grids_window_size.append(grids[i:i+window_size])
-  #y_window_size.append(y[i+window_size])
   dataset.append([torch.tensor(grids[i:i+window_size]), torch.tensor(y[i+window_size+lead_time-1])])
-#grids_window_size = np.array(grids_window_size)
-#y_window_size = np.array(y_window_size)
-#dataset = np.array(dataset)
 
-#print("Shapes of the grids and the outputs:")
-#print(grids_window_size.shape)
-#print(y_window_size.shape)
-#print(dataset.shape)
 print("--------------------")
 print()
 
@@ -159,6 +148,17 @@ print(f'Complete training. Time spent: {stop - start} seconds.')
 print("----------")
 print()
 
+torch.save({
+            'epoch': num_train_epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss': loss
+            }, models_path + 'checkpoint_CNN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(num_train_epoch) + '.tar')
+
+print("Save the checkpoint in a TAR file.")
+print("----------")
+print()
+
 # Test the model.
 
 losses = []
@@ -170,5 +170,5 @@ for x, y in test_dataloader:
     losses.append(loss.cpu().detach().numpy())
 print('Test MSE:', sum(losses) / len(losses))
 
-print("----------")
+print("--------------------")
 print()

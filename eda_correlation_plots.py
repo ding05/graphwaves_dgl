@@ -18,7 +18,7 @@ y = load(data_path + 'y.npy')
 
 soda = xr.open_dataset('data/soda_224_pt_l5.nc', decode_times=False)
 soda_array = soda.to_array(dim='VARIABLE')
-soda_array_smaller = soda_array[:,:,:,:,::5,::5]
+soda_array_smaller = soda_array[:,:,:,:,::20,::20]
 soda_array_smaller = soda_array_smaller[2,:,0,:,:,:]
 lons, lats = np.meshgrid(soda_array_smaller.LONN359_360.values, soda_array_smaller.LAT.values)
 soda_time_0 = soda_array_smaller.isel(LEV1_1=0, TIME=0)

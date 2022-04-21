@@ -5,6 +5,7 @@ import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data.sampler import SubsetRandomSampler, SequentialSampler
 
 import dgl
 import dgl.nn as dglnn
@@ -13,7 +14,6 @@ from dgl.nn import GraphConv
 from dgl.data import DGLDataset
 from dgl import save_graphs
 from dgl.dataloading import GraphDataLoader
-from torch.utils.data.sampler import SubsetRandomSampler, SequentialSampler
 
 import time
 
@@ -243,7 +243,7 @@ torch.save({
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'loss': loss
-            }, models_path + 'checkpoint_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(num_train_epoch) + '.tar')
+            }, models_path + 'checkpoint_GCN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(num_train_epoch) + '.tar')
 
 print("Save the checkpoint in a TAR file.")
 print("----------")
@@ -272,14 +272,14 @@ print()
 fig, ax = plt.subplots(figsize=(12, 8))
 plt.xlabel('Month')
 plt.ylabel('SSTA')
-plt.title('GNN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(epoch) + '_MSE_' + str(round(test_mse, 4)), fontsize=12)
+plt.title('GCN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(num_train_epoch) + '_MSE_' + str(round(test_mse, 4)), fontsize=12)
 blue_patch = mpatches.Patch(color='blue', label='Predicted')
 red_patch = mpatches.Patch(color='red', label='Observed')
 ax.legend(handles=[blue_patch, red_patch])
 month = np.arange(0, len(ys), 1, dtype=int)
 ax.plot(month, np.array(preds), 'o', color='blue')
 ax.plot(month, np.array(ys), 'o', color='red')
-plt.savefig(out_path + 'plot_GNN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(num_train_epoch) + '.png')
+plt.savefig(out_path + 'plot_GCN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(num_train_epoch) + '.png')
 
 print("Save the observed vs. predicted plot.")
 print("--------------------")

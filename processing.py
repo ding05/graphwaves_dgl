@@ -54,7 +54,7 @@ print()
 
 # Create the edge feature matrix.
 
-soda_array_smaller = soda_array[:,:,:,:,::5,::5]
+soda_array_smaller = soda_array[:,:,:,:,::20,::20]
 soda_array_smaller = soda_array_smaller[2,:,0,:,:,:]
 lons, lats = np.meshgrid(soda_array_smaller.LONN359_360.values, soda_array_smaller.LAT.values)
 
