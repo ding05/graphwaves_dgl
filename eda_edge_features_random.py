@@ -9,7 +9,7 @@ node_features = load(data_path + 'node_features.npy')
 
 num_edge = node_features.shape[0]
 
-edge_features_random = np.random.randint(0, 2, size=(num_edge, num_edge))
+edge_features_random = np.random.randint(0, 999999999, size=(num_edge, num_edge))
 
 save(data_path + 'edge_features_random.npy', edge_features_random)
 
