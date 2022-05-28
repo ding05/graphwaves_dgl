@@ -23,7 +23,7 @@ from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
-for lead_time in [1, 2, 3, 6, 12, 23]:
+for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
 
     # GCN configurations
     
@@ -31,14 +31,14 @@ for lead_time in [1, 2, 3, 6, 12, 23]:
     window_size = 3
     train_split = 0.8
     #lead_time = 1
-    loss_function = 'MSE'
+    loss_function = 'Huber' # 'MSE', 'MAE', 'Huber'
     optimizer = 'SGD' # Adam
-    learning_rate = 0.01 # 0.05
+    learning_rate = 0.01 # 0.05, 0.01
     momentum = 0.9
     weight_decay = 0.0001
     batch_size = 64
     num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
-    num_train_epoch = 20
+    num_train_epoch = 100
     
     data_path = 'data/'
     models_path = 'out/'
@@ -47,7 +47,7 @@ for lead_time in [1, 2, 3, 6, 12, 23]:
     # Transform the graphs into the DGL forms.
     
     node_features = load(data_path + 'node_features.npy')
-    edge_features = load(data_path + 'edge_features.npy')
+    edge_features = load(data_path + 'edge_features_zeros.npy')
     y = load(data_path + 'y.npy')
     
     node_num = node_features.shape[0]
@@ -176,12 +176,14 @@ for lead_time in [1, 2, 3, 6, 12, 23]:
             super(GCN, self).__init__()
             self.conv1 = GraphConv(in_feats, h_feats)
             self.conv2 = GraphConv(h_feats, out_feats)
+            self.out = nn.Linear(out_feats, 1)
             self.double()
     
         def forward(self, g, in_feat, edge_feat=None):
             h = self.conv1(g, in_feat)
             h = F.relu(h)
             h = self.conv2(g, h)
+            h = self.out(h)
             g.ndata['h'] = h
             return dgl.mean_nodes(g, 'h')
     
@@ -241,10 +243,16 @@ for lead_time in [1, 2, 3, 6, 12, 23]:
     
     # Train the GCN.
     
-    model = GCN(window_size, 200, 1)
+    model = GCN(window_size, 200, 50)
     #model = GCN2(window_size, 1, 1, F.relu, 0.5)
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
-    loss_f = nn.MSELoss()
+    optim = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
+    
+    if loss_function == 'MAE':
+        loss_f = nn.L1Loss()
+    elif loss_function == 'Huber':
+        loss_f = nn.HuberLoss()
+    else:
+        loss_f = nn.MSELoss()
     
     print("Start training.")
     print("----------")
@@ -253,8 +261,11 @@ for lead_time in [1, 2, 3, 6, 12, 23]:
     # Start time
     start = time.time()
     
+    all_loss = []
+    all_eval = []
+    
     for epoch in range(num_train_epoch):
-        print("Epoch " + str(epoch))
+        print("Epoch " + str(epoch+1))
         print()
     
         losses = []
@@ -263,11 +274,12 @@ for lead_time in [1, 2, 3, 6, 12, 23]:
             #print('Predicted y:', pred.cpu().detach().numpy())
             #print('Observed y:', y.cpu().detach().numpy())
             loss = loss_f(pred, y)
-            optimizer.zero_grad()
+            optim.zero_grad()
             loss.backward()
-            optimizer.step()
+            optim.step()
             losses.append(loss.cpu().detach().numpy())
         print('Training loss:', sum(losses) / len(losses))
+        all_loss.append(sum(losses) / len(losses))
     
         preds = []
         ys = []
@@ -278,6 +290,7 @@ for lead_time in [1, 2, 3, 6, 12, 23]:
             ys.append(y.cpu().detach().numpy().squeeze(axis=0))
         val_mse = mean_squared_error(np.array(ys), np.array(preds), squared=True)
         print('Validation MSE:', val_mse)
+        all_eval.append(val_mse)
     
         print("----------")
         print()
@@ -298,9 +311,9 @@ for lead_time in [1, 2, 3, 6, 12, 23]:
     torch.save({
                 'epoch': num_train_epoch,
                 'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
+                'optimizer_state_dict': optim.state_dict(),
                 'loss': loss
-                }, models_path + 'checkpoint_GCN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(num_train_epoch) + '.tar')
+                }, models_path + 'checkpoint_GCN_SSTAGraphDataset_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.tar')
     
     print("Save the checkpoint in a TAR file.")
     print("----------")
@@ -312,7 +325,7 @@ for lead_time in [1, 2, 3, 6, 12, 23]:
     ys = []
     for batched_graph, y in test_dataloader:
         pred = model(batched_graph, batched_graph.ndata['feat'])
-        print('Observed:', y.cpu().detach().numpy().squeeze(axis=0), '; predicted:', pred.cpu().detach().numpy().squeeze(axis=0))
+        #print('Observed:', y.cpu().detach().numpy().squeeze(axis=0), '; predicted:', pred.cpu().detach().numpy().squeeze(axis=0))
         preds.append(pred.cpu().detach().numpy().squeeze(axis=0))
         ys.append(y.cpu().detach().numpy().squeeze(axis=0))
     
@@ -329,15 +342,34 @@ for lead_time in [1, 2, 3, 6, 12, 23]:
     fig, ax = plt.subplots(figsize=(12, 8))
     plt.xlabel('Month')
     plt.ylabel('SSTA')
-    plt.title('GCN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(num_train_epoch) + '_MSE_' + str(round(test_mse, 4)), fontsize=12)
+    plt.title('MSE_' + str(round(test_mse, 4)), fontsize=12)
     blue_patch = mpatches.Patch(color='blue', label='Predicted')
     red_patch = mpatches.Patch(color='red', label='Observed')
     ax.legend(handles=[blue_patch, red_patch])
     month = np.arange(0, len(ys), 1, dtype=int)
     ax.plot(month, np.array(preds), 'o', color='blue')
     ax.plot(month, np.array(ys), 'o', color='red')
-    plt.savefig(out_path + 'plot_GCN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(num_train_epoch) + '.png')
+    plt.savefig(out_path + 'pred_GCN_SSTAGraphDataset_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
     
     print("Save the observed vs. predicted plot.")
-    print("--------------------")
+    print("----------")
     print()
+
+    all_loss = np.array(all_loss)
+    all_eval = np.array(all_eval)
+    all_epoch = np.array(list(range(1, num_train_epoch+1)))
+   
+    plt.figure()
+    plt.plot(all_epoch, all_loss)
+    plt.plot(all_epoch, all_eval)
+    blue_patch = mpatches.Patch(color='C0', label='Loss: ' + str(loss_function))
+    orange_patch = mpatches.Patch(color='C1', label='Validation Metric: ' + 'MSE')
+    plt.legend(handles=[blue_patch, orange_patch])
+    plt.xlabel('Number of Epochs')
+    plt.ylabel('Value')
+    plt.title('Performance')
+    plt.savefig(out_path + 'perform_GCN_SSTAGraphDataset_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+    
+    print("Save the loss vs. evaluation metric plot.")
+    print("--------------------")
+    print()    
