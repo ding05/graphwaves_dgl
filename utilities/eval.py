@@ -19,21 +19,23 @@ from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
+GCN_structure = ['', '']
 window_size = 3
+train_split = 0.8
+lead_time = 1
+loss_function = 'Huber' # 'MSE', 'MAE', 'Huber'
+activiation = 'lrelu' # 'relu', 'tanh' 
+optimizer = 'SGD' # Adam
+learning_rate = 0.02 # 0.05, 0.01
+momentum = 0.9
+weight_decay = 0.0001
+batch_size = 64
+num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
+num_train_epoch = 300
 
 data_path = 'data/'
 models_path = 'out/'
 out_path = 'out/'
-
-window_size = 3
-train_split = 0.8
-lead_time = 1
-optimizer = 'SGD'
-learning_rate = 0.05
-momentum = 0.9
-weight_decay = 0.0001
-batch_size = 64
-num_sample = 1677
 
 # Load the model.
 
@@ -44,23 +46,41 @@ class GCN(nn.Module):
         self.conv1 = GraphConv(in_feats, h_feats)
         self.conv2 = GraphConv(h_feats, h_feats)
         self.conv3 = GraphConv(h_feats, out_feats)
+        self.out = nn.Linear(out_feats, 1)
         self.double()
 
-    def forward(self, g, in_feat):
+    def forward(self, g, in_feat, edge_feat=None):
         h = self.conv1(g, in_feat)
-        h = F.relu(h)
+        h = act_f(h)
         h = self.conv2(g, h)
-        h = F.relu(h)
+        h = act_f(h)
+        h = self.conv2(g, h)
+        h = act_f(h)
         h = self.conv3(g, h)
+        h = self.out(h)
         g.ndata['h'] = h
         return dgl.mean_nodes(g, 'h')
 
-model = GCN(window_size, 200, 1)
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
+model = GCN(window_size, 200, 100)
+optim = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
 
-checkpoint = torch.load(models_path + 'checkpoint_GCN_SSTAGraphDataset_windowsize_3_leadtime_1_numsample_1677_trainsplit_0.8_numepoch_100.tar')
+if loss_function == 'MAE':
+    loss_f = nn.L1Loss()
+elif loss_function == 'Huber':
+    loss_f = nn.HuberLoss()
+else:
+    loss_f = nn.MSELoss()
+
+if activiation == 'lrelu':
+    act_f = nn.LeakyReLU(0.1)
+elif activiation == 'tanh':
+    act_f = nn.Tanh()
+else:
+    act_f = nn.ReLu()
+
+checkpoint = torch.load(models_path + 'checkpoint_GCN_SSTAGraphDataset_3_1_1677_0.8_Huber_SGD_lrelu_0.02_0.9_0.0001_64_300.tar')
 model.load_state_dict(checkpoint['model_state_dict'])
-optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+optim.load_state_dict(checkpoint['optimizer_state_dict'])
 epoch = checkpoint['epoch']
 loss = checkpoint['loss']
 
@@ -138,7 +158,7 @@ preds = []
 ys = []
 for batched_graph, y in test_dataloader:
     pred = model(batched_graph, batched_graph.ndata['feat'])
-    print('Observed:', y.cpu().detach().numpy().squeeze(axis=0), '; predicted:', pred.cpu().detach().numpy().squeeze(axis=0))
+    #print('Observed:', y.cpu().detach().numpy().squeeze(axis=0), '; predicted:', pred.cpu().detach().numpy().squeeze(axis=0))
     preds.append(pred.cpu().detach().numpy().squeeze(axis=0))
     ys.append(y.cpu().detach().numpy().squeeze(axis=0))
 
@@ -155,15 +175,15 @@ print()
 fig, ax = plt.subplots(figsize=(12, 8))
 plt.xlabel('Month')
 plt.ylabel('SSTA')
-plt.title('GCN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(num_train_epoch) + '_MSE_' + str(round(test_mse, 4)), fontsize=12)
+plt.title('MSE_' + str(round(test_mse, 4)), fontsize=12)
 blue_patch = mpatches.Patch(color='blue', label='Predicted')
 red_patch = mpatches.Patch(color='red', label='Observed')
 ax.legend(handles=[blue_patch, red_patch])
 month = np.arange(0, len(ys), 1, dtype=int)
 ax.plot(month, np.array(preds), 'o', color='blue')
 ax.plot(month, np.array(ys), 'o', color='red')
-plt.savefig(out_path + 'plot_GCN_SSTAGraphDataset_windowsize_' + str(window_size) + '_leadtime_' + str(lead_time) + '_numsample_' + str(num_sample) + '_trainsplit_' + str(train_split) + '_numepoch_' + str(epoch) + '.png')
+plt.savefig(out_path + 'pred_GCN_SSTAGraphDataset_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activiation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
 
 print("Save the observed vs. predicted plot.")
-print("--------------------")
+print("----------")
 print()
