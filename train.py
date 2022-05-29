@@ -32,8 +32,9 @@ for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
     train_split = 0.8
     #lead_time = 1
     loss_function = 'Huber' # 'MSE', 'MAE', 'Huber'
+    activiation = 'lrelu' # 'relu', 'tanh' 
     optimizer = 'SGD' # Adam
-    learning_rate = 0.01 # 0.05, 0.01
+    learning_rate = 0.02 # 0.05, 0.01
     momentum = 0.9
     weight_decay = 0.0001
     batch_size = 64
@@ -175,14 +176,19 @@ for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
         def __init__(self, in_feats, h_feats, out_feats):
             super(GCN, self).__init__()
             self.conv1 = GraphConv(in_feats, h_feats)
-            self.conv2 = GraphConv(h_feats, out_feats)
+            self.conv2 = GraphConv(h_feats, h_feats)
+            self.conv3 = GraphConv(h_feats, out_feats)
             self.out = nn.Linear(out_feats, 1)
             self.double()
     
         def forward(self, g, in_feat, edge_feat=None):
             h = self.conv1(g, in_feat)
-            h = F.relu(h)
+            h = act_f(h)
             h = self.conv2(g, h)
+            h = act_f(h)
+            h = self.conv2(g, h)
+            h = act_f(h)
+            h = self.conv3(g, h)
             h = self.out(h)
             g.ndata['h'] = h
             return dgl.mean_nodes(g, 'h')
@@ -243,7 +249,7 @@ for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
     
     # Train the GCN.
     
-    model = GCN(window_size, 200, 50)
+    model = GCN(window_size, 200, 100)
     #model = GCN2(window_size, 1, 1, F.relu, 0.5)
     optim = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
     
@@ -253,6 +259,13 @@ for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
         loss_f = nn.HuberLoss()
     else:
         loss_f = nn.MSELoss()
+    
+    if activiation == 'lrelu':
+        act_f = nn.LeakyReLU(0.1)
+    elif activiation == 'tanh':
+        act_f = nn.Tanh()
+    else:
+        act_f = nn.ReLu()
     
     print("Start training.")
     print("----------")
@@ -313,7 +326,7 @@ for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optim.state_dict(),
                 'loss': loss
-                }, models_path + 'checkpoint_GCN_SSTAGraphDataset_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.tar')
+                }, models_path + 'checkpoint_GCN_SSTAGraphDataset_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activiation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.tar')
     
     print("Save the checkpoint in a TAR file.")
     print("----------")
@@ -349,7 +362,7 @@ for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
     month = np.arange(0, len(ys), 1, dtype=int)
     ax.plot(month, np.array(preds), 'o', color='blue')
     ax.plot(month, np.array(ys), 'o', color='red')
-    plt.savefig(out_path + 'pred_GCN_SSTAGraphDataset_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+    plt.savefig(out_path + 'pred_GCN_SSTAGraphDataset_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activiation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
     
     print("Save the observed vs. predicted plot.")
     print("----------")
@@ -368,7 +381,7 @@ for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
     plt.xlabel('Number of Epochs')
     plt.ylabel('Value')
     plt.title('Performance')
-    plt.savefig(out_path + 'perform_GCN_SSTAGraphDataset_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+    plt.savefig(out_path + 'perform_GCN_SSTAGraphDataset_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activiation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
     
     print("Save the loss vs. evaluation metric plot.")
     print("--------------------")
