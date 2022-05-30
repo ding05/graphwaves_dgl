@@ -16,22 +16,29 @@ from torch.utils.data.sampler import SubsetRandomSampler, SequentialSampler
 
 from sklearn.metrics import mean_squared_error
 
+import json
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
+import matplotlib.transforms as mtransforms
 
-GCN_structure = ['', '']
+lead_time = 1
+net_class = 'GCN' # 'GAT'
+num_layer = '3'
+num_hid_feat = 200
+num_out_feat = 100
 window_size = 3
 train_split = 0.8
-lead_time = 1
+#lead_time = 1
 loss_function = 'Huber' # 'MSE', 'MAE', 'Huber'
 activiation = 'lrelu' # 'relu', 'tanh' 
 optimizer = 'SGD' # Adam
-learning_rate = 0.02 # 0.05, 0.01
+learning_rate = 0.02 # 0.05, 0.02, 0.01
 momentum = 0.9
 weight_decay = 0.0001
 batch_size = 64
 num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
-num_train_epoch = 300
+num_train_epoch = 100
 
 data_path = 'data/'
 models_path = 'out/'
@@ -78,7 +85,7 @@ elif activiation == 'tanh':
 else:
     act_f = nn.ReLu()
 
-checkpoint = torch.load(models_path + 'checkpoint_GCN_SSTAGraphDataset_3_1_1677_0.8_Huber_SGD_lrelu_0.02_0.9_0.0001_64_300.tar')
+checkpoint = torch.load(models_path + 'checkpoint_SSTAGraphDataset_GCN2001003_1_1677_0.8_Huber_SGD_lrelu_0.02_0.9_0.0001_64_100.tar')
 model.load_state_dict(checkpoint['model_state_dict'])
 optim.load_state_dict(checkpoint['optimizer_state_dict'])
 epoch = checkpoint['epoch']
@@ -172,18 +179,58 @@ print('Final validation / test MSE:', test_mse)
 print("----------")
 print()
 
+# Show the results.
+
+all_perform_dict = {
+  'training_time': str(stop-start),
+  'all_loss': all_loss.tolist(),
+  'all_eval': all_eval.tolist(),
+  'all_epoch': all_epoch.tolist()}
+
 fig, ax = plt.subplots(figsize=(12, 8))
 plt.xlabel('Month')
 plt.ylabel('SSTA')
-plt.title('MSE_' + str(round(test_mse, 4)), fontsize=12)
-blue_patch = mpatches.Patch(color='blue', label='Predicted')
-red_patch = mpatches.Patch(color='red', label='Observed')
-ax.legend(handles=[blue_patch, red_patch])
+plt.title('MSE: ' + str(round(test_mse, 4)), fontsize=12)
+patch_a = mpatches.Patch(color='C0', label='Predicted')
+patch_b = mpatches.Patch(color='C1', label='Observed')
+ax.legend(handles=[patch_a, patch_b])
 month = np.arange(0, len(ys), 1, dtype=int)
-ax.plot(month, np.array(preds), 'o', color='blue')
-ax.plot(month, np.array(ys), 'o', color='red')
-plt.savefig(out_path + 'pred_GCN_SSTAGraphDataset_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activiation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+ax.plot(month, np.array(preds), 'o', color='C0')
+ax.plot(month, np.array(ys), 'o', color='C1')
+plt.savefig(out_path + 'pred_a_SSTAGraphDataset_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activiation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
 
-print("Save the observed vs. predicted plot.")
+fig, ax = plt.subplots(figsize=(12, 8))
+ax.set_xlim([-2.5, 2.5])
+ax.set_ylim([-2.5, 2.5])
+plt.xlabel('Observation')
+plt.ylabel('Prediction')
+plt.title('MSE: ' + str(round(test_mse, 4)), fontsize=12)
+ax.plot(np.array(ys), np.array(preds), 'o', color='C0')
+line = mlines.Line2D([0, 1], [0, 1], color='red')
+transform = ax.transAxes
+line.set_transform(transform)
+ax.add_line(line)
+plt.savefig(out_path + 'pred_b_SSTAGraphDataset_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activiation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+    
+print("Save the observed vs. predicted plots.")
 print("----------")
+print()
+
+all_loss = np.array(all_loss)
+all_eval = np.array(all_eval)
+all_epoch = np.array(list(range(1, num_train_epoch+1)))
+
+plt.figure()
+plt.plot(all_epoch, all_loss)
+plt.plot(all_epoch, all_eval)
+blue_patch = mpatches.Patch(color='C0', label='Loss: ' + str(loss_function))
+orange_patch = mpatches.Patch(color='C1', label='Validation Metric: ' + 'MSE')
+plt.legend(handles=[blue_patch, orange_patch])
+plt.xlabel('Epoch')
+plt.ylabel('Value')
+plt.title('Performance')
+plt.savefig(out_path + 'perform_SSTAGraphDataset_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activiation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+
+print("Save the loss vs. evaluation metric plot.")
+print("--------------------")
 print()
