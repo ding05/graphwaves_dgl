@@ -22,12 +22,15 @@ import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 import matplotlib.transforms as mtransforms
 
+checkpoint_path = 'checkpoint_SSTAGraphDataset_GCN_200_100_5_1_1675_0.8_Huber_SGD_lrelu_0.02_0.9_0.0001_64_50.tar'
+performance_path = 'perform_SSTAGraphDataset_GCN_200_100_5_1_1675_0.8_Huber_SGD_lrelu_0.02_0.9_0.0001_64_50.txt'
+
 lead_time = 1
 net_class = 'GCN' # 'GAT'
 num_layer = '3'
 num_hid_feat = 200
 num_out_feat = 100
-window_size = 3
+window_size = 5
 train_split = 0.8
 #lead_time = 1
 loss_function = 'Huber' # 'MSE', 'MAE', 'Huber'
@@ -38,7 +41,7 @@ momentum = 0.9
 weight_decay = 0.0001
 batch_size = 64
 num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
-num_train_epoch = 100
+num_train_epoch = 50
 
 data_path = 'data/'
 models_path = 'out/'
@@ -85,7 +88,7 @@ elif activiation == 'tanh':
 else:
     act_f = nn.ReLu()
 
-checkpoint = torch.load(models_path + 'checkpoint_SSTAGraphDataset_GCN2001003_1_1677_0.8_Huber_SGD_lrelu_0.02_0.9_0.0001_64_100.tar')
+checkpoint = torch.load(models_path + checkpoint_path)
 model.load_state_dict(checkpoint['model_state_dict'])
 optim.load_state_dict(checkpoint['optimizer_state_dict'])
 epoch = checkpoint['epoch']
@@ -181,11 +184,15 @@ print()
 
 # Show the results.
 
-all_perform_dict = {
-  'training_time': str(stop-start),
-  'all_loss': all_loss.tolist(),
-  'all_eval': all_eval.tolist(),
-  'all_epoch': all_epoch.tolist()}
+# Read the performance dictionary from the TXT file.
+
+with open(models_path + performance_path) as f:
+    data = f.read()
+all_performance = json.loads(data)
+
+all_loss = all_performance['all_loss']
+all_eval = all_performance['all_eval']
+all_epoch = all_performance['all_epoch']
 
 fig, ax = plt.subplots(figsize=(12, 8))
 plt.xlabel('Month')
