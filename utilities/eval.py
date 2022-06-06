@@ -22,8 +22,8 @@ import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 import matplotlib.transforms as mtransforms
 
-checkpoint_path = 'checkpoint_SSTAGraphDataset_GCN_200_100_5_1_1675_0.8_Huber_SGD_lrelu_0.02_0.9_0.0001_64_50.tar'
-performance_path = 'perform_SSTAGraphDataset_GCN_200_100_5_1_1675_0.8_Huber_SGD_lrelu_0.02_0.9_0.0001_64_50.txt'
+checkpoint_path = 'checkpoint_SSTAGraphDataset_GCN_200_100_5_1_1675_0.8_SMAE_SGD_lrelu_0.02_0.9_0.0001_64_50.tar'
+performance_path = 'perform_SSTAGraphDataset_GCN_200_100_5_1_1675_0.8_SMAE_SGD_lrelu_0.02_0.9_0.0001_64_50.txt'
 
 lead_time = 1
 net_class = 'GCN' # 'GAT'
@@ -33,7 +33,7 @@ num_out_feat = 100
 window_size = 5
 train_split = 0.8
 #lead_time = 1
-loss_function = 'Huber' # 'MSE', 'MAE', 'Huber'
+loss_function = 'SMAE' # 'MSE', 'MAE', 'Huber'
 activiation = 'lrelu' # 'relu', 'tanh' 
 optimizer = 'SGD' # Adam
 learning_rate = 0.02 # 0.05, 0.02, 0.01
@@ -78,6 +78,8 @@ if loss_function == 'MAE':
     loss_f = nn.L1Loss()
 elif loss_function == 'Huber':
     loss_f = nn.HuberLoss()
+elif loss_function == 'SMAE':
+    loss_f = nn.SmoothL1Loss()
 else:
     loss_f = nn.MSELoss()
 
