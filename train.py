@@ -37,7 +37,7 @@ for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
     window_size = 5
     train_split = 0.8
     #lead_time = 1
-    loss_function = 'Huber' # 'MSE', 'MAE', 'Huber'
+    loss_function = 'SMAE' # 'MSE', 'MAE', 'Huber', 'SMAE'
     activiation = 'lrelu' # 'relu', 'tanh' 
     optimizer = 'SGD' # Adam
     learning_rate = 0.02 # 0.05, 0.02, 0.01
@@ -45,7 +45,7 @@ for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
     weight_decay = 0.0001
     batch_size = 64
     num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
-    num_train_epoch = 100
+    num_train_epoch = 50
     
     data_path = 'data/'
     models_path = 'out/'
@@ -54,7 +54,7 @@ for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
     # Transform the graphs into the DGL forms.
     
     node_features = load(data_path + 'node_features.npy')
-    edge_features = load(data_path + 'edge_features_zeros.npy')
+    edge_features = load(data_path + 'edge_features.npy')
     y = load(data_path + 'y.npy')
     
     node_num = node_features.shape[0]
@@ -263,6 +263,8 @@ for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
         loss_f = nn.L1Loss()
     elif loss_function == 'Huber':
         loss_f = nn.HuberLoss()
+    elif loss_function == 'SMAE':
+        loss_f = nn.SmoothL1Loss()
     else:
         loss_f = nn.MSELoss()
     
@@ -304,7 +306,7 @@ for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
         ys = []
         for batched_graph, y in test_dataloader:
             pred = model(batched_graph, batched_graph.ndata['feat'], batched_graph.edata['w']) ###
-            #print('pred:', pred) ###
+            #print('pred:', pred)
             preds.append(pred.cpu().detach().numpy().squeeze(axis=0))
             ys.append(y.cpu().detach().numpy().squeeze(axis=0))
         val_mse = mean_squared_error(np.array(ys), np.array(preds), squared=True)
