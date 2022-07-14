@@ -1,3 +1,5 @@
+from utilities.loss import *
+
 import numpy as np
 from numpy import load
 import random
