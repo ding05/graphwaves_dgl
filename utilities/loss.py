@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 # Standard loss functions
 
-def mse(pred, target):
+def mse(preds, target):
   return nn.MSELoss(preds, targets)
 
 def mae(preds, targets):
