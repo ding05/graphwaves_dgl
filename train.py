@@ -30,7 +30,7 @@ import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 import matplotlib.transforms as mtransforms
 
-for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
+for loss_function in ['MSE', 'MAE', 'Huber', 'WMSE', 'WMAE', 'WHuber', 'WFMSE', 'WFMAE', 'BMSE']:
 
     # GNN configurations
     
@@ -40,16 +40,16 @@ for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
     num_out_feat = 100
     window_size = 5
     train_split = 0.8
-    #lead_time = 1
-    loss_function = 'SMAE' # 'MSE', 'MAE', 'Huber', 'SMAE'
-    activiation = 'lrelu' # 'relu', 'tanh' 
+    lead_time = 1
+    #loss_function = 'BMSE' # 'MSE', 'MAE', 'Huber', 'WMSE', 'WMAE', 'WHuber', 'WFMSE', 'WFMAE', 'BMSE
+    activation = 'lrelu' # 'relu', 'tanh' 
     optimizer = 'SGD' # Adam
     learning_rate = 0.02 # 0.05, 0.02, 0.01
     momentum = 0.9
     weight_decay = 0.0001
     batch_size = 64
     num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
-    num_train_epoch = 50
+    num_train_epoch = 20
     
     data_path = 'data/'
     models_path = 'out/'
@@ -125,7 +125,26 @@ for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
         for batched_graph, y in train_dataloader:
             pred = model(batched_graph, batched_graph.ndata['feat'], batched_graph.edata['w'])
             # Set a loss function.
-            loss = weighted_focal_mae(pred, y)
+            if loss_function == 'MSE':
+                loss = mse(pred, y)
+            elif loss_function == 'MAE':
+                loss = mae(pred, y)
+            elif loss_function == 'Huber':
+                loss = huber(pred, y)
+            elif loss_function == 'WMSE':
+                loss = weighted_mse(pred, y)
+            elif loss_function == 'WMAE':
+                loss = weighted_mae(pred, y)
+            elif loss_function == 'WHuber':
+                loss = weighted_huber(pred, y)                
+            elif loss_function == 'WFMSE':
+                loss = weighted_focal_mse(pred, y)  
+            elif loss_function == 'WFMAE':
+                loss = weighted_focal_mae(pred, y)              
+            elif loss_function == 'BMSE':
+                loss = balanced_mse(pred, y)
+            else:
+                pass
             optim.zero_grad()
             loss.backward()
             optim.step()
@@ -160,7 +179,7 @@ for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optim.state_dict(),
                 'loss': loss
-                }, models_path + 'checkpoint_SSTAGraphDataset_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activiation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.tar')
+                }, models_path + 'checkpoint_SSTAGraphDataset_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.tar')
     
     print("Save the checkpoint in a TAR file.")
     print("----------")
@@ -194,7 +213,7 @@ for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
       'all_eval': all_eval.tolist(),
       'all_epoch': all_epoch.tolist()}
 
-    with open(out_path + 'perform_SSTAGraphDataset_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activiation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.txt', "w") as file:
+    with open(out_path + 'perform_SSTAGraphDataset_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.txt', "w") as file:
         file.write(json.dumps(all_perform_dict))
 
     print("Save the performance in a TXT file.")
@@ -211,11 +230,11 @@ for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
     month = np.arange(0, len(ys), 1, dtype=int)
     ax.plot(month, np.array(preds), 'o', color='C0')
     ax.plot(month, np.array(ys), 'o', color='C1')
-    plt.savefig(out_path + 'pred_a_SSTAGraphDataset_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activiation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+    plt.savefig(out_path + 'pred_a_SSTAGraphDataset_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
 
     fig, ax = plt.subplots(figsize=(12, 8))
-    ax.set_xlim([-2.5, 2.5])
-    ax.set_ylim([-2.5, 2.5])
+    ax.set_xlim([-2, 2])
+    ax.set_ylim([-2, 2])
     plt.xlabel('Observation')
     plt.ylabel('Prediction')
     plt.title('MSE: ' + str(round(test_mse, 4)), fontsize=12)
@@ -224,7 +243,7 @@ for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
     transform = ax.transAxes
     line.set_transform(transform)
     ax.add_line(line)
-    plt.savefig(out_path + 'pred_b_SSTAGraphDataset_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activiation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+    plt.savefig(out_path + 'pred_b_SSTAGraphDataset_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
         
     print("Save the observed vs. predicted plots.")
     print("----------")
@@ -239,7 +258,7 @@ for lead_time in [1]: # [1, 2, 3, 6, 12, 23]
     plt.xlabel('Epoch')
     plt.ylabel('Value')
     plt.title('Performance')
-    plt.savefig(out_path + 'perform_SSTAGraphDataset_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activiation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+    plt.savefig(out_path + 'perform_SSTAGraphDataset_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
 
     print("Save the loss vs. evaluation metric plot.")
     print("--------------------")
