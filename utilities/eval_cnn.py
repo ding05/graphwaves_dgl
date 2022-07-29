@@ -22,7 +22,8 @@ import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 import matplotlib.transforms as mtransforms
 
-# for lead_time in [1]:
+checkpoint_path = 'checkpoint_CNN_SSTASODA_temp_a.tar'
+performance_path = 'perform_SSTASODA_CNN_temp_a.txt'
 
 # CNN configurations
 
@@ -39,32 +40,13 @@ optimizer = 'RMSP' # SGD, Adam
 learning_rate = 0.005 # 0.05, 0.02, 0.01
 momentum = 0.9
 weight_decay = 0.0001
-batch_size = 32
+batch_size = 64
 num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
-num_train_epoch = 200
+num_train_epoch = 50
 
 data_path = 'data/'
 models_path = 'out/'
 out_path = 'out/'
-
-"""
-
-# If running this script for the first time, process the dataset.
-
-soda = xr.open_dataset('data/soda_224_pt_l5.nc', decode_times=False)
-
-soda_array = soda.to_array(dim='VARIABLE')
-soda_smaller = np.array(soda_array[:,:,:,:,:,:])
-soda_smaller = soda_smaller[2,:,0,:,:,:] # Drop the bnds dimension and the other two variables; take every 20th longitude and latitude.
-soda_smaller = np.squeeze(soda_smaller, axis=0)
-
-save(data_path + 'grids.npy', soda_smaller)
-
-print("Save the grids in an NPY file")
-print("--------------------")
-print()
-
-"""
 
 # Load the grids.
 
@@ -126,8 +108,7 @@ class CNN(nn.Module):
         #print("Pool 2 passed.")
         h = self.conv3(h)
         #print("Conv 3 passed.")
-        #h = h.view(h.size(0), -1)
-        h = torch.flatten(h, 1)
+        h = h.view(x.size(0), -1)
         h = self.fc1(h)
         #print("FCN 1 passed.")
         output = self.fc2(h)
@@ -138,87 +119,11 @@ class CNN(nn.Module):
 model = CNN()
 optim = torch.optim.RMSprop(model.parameters(), lr=learning_rate, alpha=0.9)
 
-# Start time
-start = time.time()
-
-all_loss = []
-all_eval = []
-
-for epoch in range(num_train_epoch):
-    print("Epoch " + str(epoch))
-    print()
-    
-    losses = []
-    for x, y in train_dataloader:
-        pred = torch.squeeze(model(x))
-        
-        if loss_function == 'MSE':
-            loss = mse(pred, y)
-        elif loss_function == 'MAE':
-            loss = mae(pred, y)
-        elif loss_function == 'Huber':
-            loss = huber(pred, y)
-        elif loss_function == 'WMSE':
-            loss = weighted_mse(pred, y)
-        elif loss_function == 'WMAE':
-            loss = weighted_mae(pred, y)
-        elif loss_function == 'WHuber':
-            loss = weighted_huber(pred, y)                
-        elif loss_function == 'WFMSE':
-            loss = weighted_focal_mse(pred, y)  
-        elif loss_function == 'WFMAE':
-            loss = weighted_focal_mae(pred, y)              
-        elif loss_function == 'BMSE':
-            loss = balanced_mse(pred, y)
-        else:
-            pass
-        
-        print('pred: ', pred)
-        print('y: ', y)
-        print()
-        loss_func = nn.MSELoss()
-        loss = loss_func(pred, y)
-        optim.zero_grad()
-        loss.backward()
-        optim.step()
-        losses.append(loss.cpu().detach().numpy())
-    print("----------")
-    print()
-    print('Training loss:', sum(losses) / len(losses))
-    print()
-    all_loss.append(sum(losses) / len(losses))
-
-    preds = []
-    ys = []
-    for x, y in test_dataloader:
-        pred = torch.squeeze(model(x))
-        preds.append(pred.cpu().detach().numpy())
-        ys.append(y.cpu().detach().numpy())
-    val_mse = mean_squared_error(np.array(ys), np.array(preds), squared=True)
-    print('Validation MSE:', val_mse)
-    print()
-    all_eval.append(val_mse)
-
-    print("----------")
-    print()
-
-# End time
-stop = time.time()
-
-print(f'Complete training. Time spent: {stop - start} seconds.')
-print("----------")
-print()
-
-torch.save({
-            'epoch': num_train_epoch,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optim.state_dict(),
-            'loss': loss
-            }, models_path + 'checkpoint_CNN_SSTASODA_windowsize_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.tar')
-
-print("Save the checkpoint in a TAR file.")
-print("----------")
-print()
+checkpoint = torch.load(models_path + checkpoint_path)
+model.load_state_dict(checkpoint['model_state_dict'])
+optim.load_state_dict(checkpoint['optimizer_state_dict'])
+epoch = checkpoint['epoch']
+loss = checkpoint['loss']
 
 # Test the model.
 
@@ -240,22 +145,15 @@ print()
 
 # Show the results.
 
-all_loss = np.array(all_loss)
-all_eval = np.array(all_eval)
-all_epoch = np.array(list(range(1, num_train_epoch+1)))
+# Read the performance dictionary from the TXT file.
 
-all_perform_dict = {
-  'training_time': str(stop-start),
-  'all_loss': all_loss.tolist(),
-  'all_eval': all_eval.tolist(),
-  'all_epoch': all_epoch.tolist()}
+with open(models_path + performance_path) as f:
+    data = f.read()
+all_performance = json.loads(data)
 
-with open(out_path + 'perform_SSTASODA_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.txt', "w") as file:
-    file.write(json.dumps(all_perform_dict))
-
-print("Save the performance in a TXT file.")
-print("----------")
-print()
+all_loss = all_performance['all_loss']
+all_eval = all_performance['all_eval']
+all_epoch = all_performance['all_epoch']
 
 fig, ax = plt.subplots(figsize=(12, 8))
 plt.xlabel('Month')
