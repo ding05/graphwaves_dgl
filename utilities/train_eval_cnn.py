@@ -2,6 +2,7 @@ from loss import *
 
 import numpy as np
 from numpy import asarray, save, load
+import math
 
 import xarray as xr
 
@@ -36,12 +37,12 @@ lead_time = 1
 loss_function = 'MSE' # 'MSE', 'MAE', 'Huber', 'WMSE', 'WMAE', 'WHuber', 'WFMSE', 'WFMAE', 'BMSE
 activation = 'tanh' # 'relu', 'tanh' 
 optimizer = 'RMSP' # SGD, Adam
-learning_rate = 0.005 # 0.05, 0.02, 0.01
+learning_rate = 0.001 # 0.05, 0.02, 0.01
 momentum = 0.9
 weight_decay = 0.0001
-batch_size = 540 # >= 120 crashed for original size, >= 550 crashed for half size
+batch_size = math.ceil((1680*0.8-window_size-lead_time+1) / 2) # >= 120 crashed for original size, >= 550 crashed for half size
 num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
-num_train_epoch = 200
+num_train_epoch = 700
 
 data_path = 'data/'
 models_path = 'out/'
@@ -64,9 +65,34 @@ print("--------------------")
 print()
 """
 
+"""
+# If running this script for the first time, process the dataset to get a smaller grid around Bay of Plenty.
+
+soda = xr.open_dataset('data/soda_224_pt_l5.nc', decode_times=False)
+
+soda['LONN359_360'] = soda.LONN359_360 + 180
+
+soda_bop = soda.where(soda.LAT < 0, drop=True)
+soda_bop = soda_bop.where(soda.LAT > -70, drop=True)
+soda_bop = soda_bop.where(soda.LONN359_360 > 107, drop=True)
+soda_bop = soda_bop.where(soda.LONN359_360 < 247, drop=True)
+
+soda_array_bop = soda_bop.to_array(dim='VARIABLE')
+soda_smaller_bop = np.array(soda_array_bop[:,:,:,:,:,:])
+soda_smaller_bop = soda_smaller_bop[2,:,0,:,::,::] # Drop the bnds dimension and the other two variables.
+soda_smaller_bop = np.squeeze(soda_smaller_bop, axis=0)
+soda_smaller_bop = np.transpose(soda_smaller_bop, (2, 0, 1))
+
+save(data_path + 'grids_bop.npy', soda_smaller_bop)
+
+print("Save the grids in an NPY file")
+print("--------------------")
+print()
+"""
+
 # Load the grids.
 
-grids = load(data_path + 'grids_half.npy')
+grids = load(data_path + 'grids_bop.npy')
 y = load(data_path + 'y.npy')
 
 y = y.squeeze(axis=1)
@@ -106,7 +132,7 @@ class CNN(nn.Module):
         self.conv2 = nn.Conv2d(num_hid_feat, num_hid_feat, 4)
         self.pool2 = nn.MaxPool2d(2)
         self.conv3 = nn.Conv2d(num_hid_feat, num_hid_feat, 4)
-        self.fc1 = nn.Linear(87150, num_out_feat) # 394440 for full, 15960 for quarter
+        self.fc1 = nn.Linear(52920, num_out_feat) # 394440 for full, 87150 for half, 15960 for quarter
         self.fc2 = nn.Linear(num_out_feat, 1 )
         self.double()
 
@@ -212,7 +238,7 @@ torch.save({
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optim.state_dict(),
             'loss': loss
-            }, models_path + 'checkpoint_SSTASODAHalf_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.tar')
+            }, models_path + 'checkpoint_SSTASODABoP_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.tar')
 
 print("Save the checkpoint in a TAR file.")
 print("----------")
@@ -248,7 +274,7 @@ all_perform_dict = {
   'all_eval': all_eval.tolist(),
   'all_epoch': all_epoch.tolist()}
 
-with open(out_path + 'perform_SSTASODAHalf_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.txt', "w") as file:
+with open(out_path + 'perform_SSTASODABoP_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.txt', "w") as file:
     file.write(json.dumps(all_perform_dict))
 
 print("Save the performance in a TXT file.")
@@ -265,7 +291,7 @@ ax.legend(handles=[patch_a, patch_b])
 month = np.arange(0, len(ys), 1, dtype=int)
 ax.plot(month, np.array(preds), 'o', color='C0')
 ax.plot(month, np.array(ys), 'o', color='C1')
-plt.savefig(out_path + 'pred_a_SSTASODAHalf_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+plt.savefig(out_path + 'pred_a_SSTASODABoP_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
 
 fig, ax = plt.subplots(figsize=(12, 8))
 ax.set_xlim([-2, 2])
@@ -278,7 +304,7 @@ line = mlines.Line2D([0, 1], [0, 1], color='red')
 transform = ax.transAxes
 line.set_transform(transform)
 ax.add_line(line)
-plt.savefig(out_path + 'pred_b_SSTASODAHalf_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+plt.savefig(out_path + 'pred_b_SSTASODABoP_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
     
 print("Save the observed vs. predicted plots.")
 print("----------")
@@ -293,7 +319,7 @@ plt.legend(handles=[blue_patch, orange_patch])
 plt.xlabel('Epoch')
 plt.ylabel('Value')
 plt.title('Performance')
-plt.savefig(out_path + 'perform_SSTASODAHalf_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+plt.savefig(out_path + 'perform_SSTASODABoP_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
 
 print("Save the loss vs. evaluation metric plot.")
 print("--------------------")

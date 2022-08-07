@@ -2,6 +2,7 @@ from loss import *
 
 import numpy as np
 from numpy import asarray, save, load
+import math
 
 import xarray as xr
 
@@ -22,8 +23,8 @@ import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 import matplotlib.transforms as mtransforms
 
-checkpoint_path = 'checkpoint_SSTASODAHalf_CNN_30_50_5_1_1675_0.8_MSE_RMSP_tanh_0.005_0.9_0.0001_540_200.tar'
-performance_path = 'perform_SSTASODAHalf_CNN_30_50_5_1_1675_0.8_MSE_RMSP_tanh_0.005_0.9_0.0001_540_200.txt'
+checkpoint_path = 'checkpoint_SSTASODABoP_CNN_30_50_5_1_1675_0.8_MSE_RMSP_tanh_0.001_0.9_0.0001_670_700.tar'
+performance_path = 'perform_SSTASODABoP_CNN_30_50_5_1_1675_0.8_MSE_RMSP_tanh_0.001_0.9_0.0001_670_700.txt'
 
 # CNN configurations
 
@@ -37,12 +38,12 @@ lead_time = 1
 loss_function = 'MSE' # 'MSE', 'MAE', 'Huber', 'WMSE', 'WMAE', 'WHuber', 'WFMSE', 'WFMAE', 'BMSE
 activation = 'tanh' # 'relu', 'tanh' 
 optimizer = 'RMSP' # SGD, Adam
-learning_rate = 0.005 # 0.05, 0.02, 0.01
+learning_rate = 0.001 # 0.05, 0.02, 0.01
 momentum = 0.9
 weight_decay = 0.0001
-batch_size = 540 # >= 120 crashed for original size, >= 550 crashed for half size
+batch_size = math.ceil((1680*0.8-window_size-lead_time+1) / 2) # >= 120 crashed for original size, >= 550 crashed for half size
 num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
-num_train_epoch = 200
+num_train_epoch = 700
 
 data_path = 'data/'
 models_path = 'out/'
@@ -50,7 +51,7 @@ out_path = 'out/'
 
 # Load the grids.
 
-grids = load(data_path + 'grids_half.npy')
+grids = load(data_path + 'grids_bop.npy')
 y = load(data_path + 'y.npy')
 
 y = y.squeeze(axis=1)
@@ -90,7 +91,7 @@ class CNN(nn.Module):
         self.conv2 = nn.Conv2d(num_hid_feat, num_hid_feat, 4)
         self.pool2 = nn.MaxPool2d(2)
         self.conv3 = nn.Conv2d(num_hid_feat, num_hid_feat, 4)
-        self.fc1 = nn.Linear(87150, num_out_feat)
+        self.fc1 = nn.Linear(52920, num_out_feat)
         self.fc2 = nn.Linear(num_out_feat, 1 )
         self.double()
 
@@ -165,7 +166,7 @@ ax.legend(handles=[patch_a, patch_b])
 month = np.arange(0, len(ys), 1, dtype=int)
 ax.plot(month, np.array(preds), 'o', color='C0')
 ax.plot(month, np.array(ys), 'o', color='C1')
-plt.savefig(out_path + 'pred_a_SSTASODAHalf_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+plt.savefig(out_path + 'pred_a_SSTASODABoP_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
 
 fig, ax = plt.subplots(figsize=(12, 8))
 ax.set_xlim([-2, 2])
@@ -178,7 +179,7 @@ line = mlines.Line2D([0, 1], [0, 1], color='red')
 transform = ax.transAxes
 line.set_transform(transform)
 ax.add_line(line)
-plt.savefig(out_path + 'pred_b_SSTASODAHalf_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+plt.savefig(out_path + 'pred_b_SSTASODABoP_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
     
 print("Save the observed vs. predicted plots.")
 print("----------")
@@ -193,7 +194,7 @@ plt.legend(handles=[blue_patch, orange_patch])
 plt.xlabel('Epoch')
 plt.ylabel('Value')
 plt.title('Performance')
-plt.savefig(out_path + 'perform_SSTASODAHalf_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+plt.savefig(out_path + 'perform_SSTASODABoP_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
 
 print("Save the loss vs. evaluation metric plot.")
 print("--------------------")
