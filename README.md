@@ -1,3 +1,3 @@
 # GraphWaves
 
-A graph neural network for ocean temperature anomaly prediction. It is under development.
+A series of neural network models for ocean temperature anomaly prediction. This project is under development.
