@@ -37,7 +37,8 @@ index = np.searchsorted(bounds, 0)
 bounds = np.insert(bounds, index, 0)
 norm = BoundaryNorm(bounds, cmap.N)
 
-for lag in [0, 1, 2, 3, 6, 12, 23]:
+for lag in [1, 3, 12, 23]:
+#for lag in [1]:
 
   # Compute the correlation coefficients.
 
@@ -65,11 +66,14 @@ for lag in [0, 1, 2, 3, 6, 12, 23]:
   df_fine_soda.iloc[:,0] = df_fine_soda.iloc[:,0] + np.where(df_fine_soda.iloc[:,0]<0, 360, 0)
 
   print(df_fine_soda)
-
+  
+  #plt.rcParams.update({'font.size': 22})
+  
   figure(figsize=(12, 8))
   plt.scatter(x='Longitude', y='Latitude', c='Correlation Coefficient', s=20, data=df_fine_soda, norm=norm, cmap=cmap)
   plt.colorbar()
-  plt.title('Correlations Between SSTA Time Series at (177.75, -34.75) and All Nodes with ' + str(lag) + '-Month Lag', fontsize=12)
+  plt.title('Correlations Between SSTA Time Series at One Point in Bay of Plenty and All Locations with ' + str(lag) + '-Month Lag', fontsize=12)
+  #plt.title('Correlations Between SSTA Time Series at One Point in the Pacific Ocean around the Equator and All Locations with ' + str(lag) + '-Month Lag', fontsize=12)
   plt.xlabel('Longitude')
   plt.ylabel('Latitude')
   plt.savefig(out_path + 'plot_lag_' + str(lag) + '_correlation.png')

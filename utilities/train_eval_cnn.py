@@ -30,7 +30,7 @@ import matplotlib.transforms as mtransforms
 net_class = 'CNN' #
 num_layer = 3 #
 num_hid_feat = 30 #
-num_out_feat = 50 #
+num_out_feat = 500 #
 window_size = 3
 train_split = 0.8
 lead_time = 1
@@ -40,9 +40,9 @@ optimizer = 'RMSP' # SGD, Adam
 learning_rate = 0.001 # 0.05, 0.02, 0.01
 momentum = 0.9
 weight_decay = 0
-batch_size = 110 # >= 120 crashed for original size, >= 550 crashed for half size
+batch_size = 540 # >= 120 crashed for original size, >= 550 crashed for half size, >= 480 crashed for half size and two variables
 num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
-num_train_epoch = 700
+num_train_epoch = 400
 
 data_path = 'data/'
 models_path = 'out/'
@@ -92,22 +92,34 @@ print()
 
 # Load the grids.
 
-grids = load(data_path + 'grids.npy')
+grids = load(data_path + 'grids_half.npy')
+#grids_salt = load(data_path + 'grids_salt_half.npy')
 y = load(data_path + 'y.npy')
 
 y = y.squeeze(axis=1)
 
 # Turn NAs into 0.
 grids[np.isnan(grids)] = 0
+#grids_salt[np.isnan(grids_salt)] = 0
 
 dataset = []
+
+# For one variable: SSTA
+
 for i in range(len(y)-window_size-lead_time):
   dataset.append([torch.tensor(grids[i:i+window_size]), torch.tensor(y[i+window_size+lead_time-1])])
 
-print("--------------------")
-print()
+"""
+# For two variables: SSTA and salinity
+
+for i in range(len(y)-window_size-lead_time):
+  dataset.append([torch.tensor(np.concatenate((grids[i:i+window_size], grids_salt[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
+"""
 
 #print('Dataset:', dataset[0][0].shape)
+
+print("--------------------")
+print()
 
 num_examples = len(dataset)
 num_train = int(num_examples * train_split)
@@ -127,12 +139,12 @@ class CNN(nn.Module):
 
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(window_size, num_hid_feat, 8)
+        self.conv1 = nn.Conv2d(window_size, num_hid_feat, 8) # window_size: window size of three, two variables
         self.pool1 = nn.MaxPool2d(2)
         self.conv2 = nn.Conv2d(num_hid_feat, num_hid_feat, 4)
         self.pool2 = nn.MaxPool2d(2)
         self.conv3 = nn.Conv2d(num_hid_feat, num_hid_feat, 4)
-        self.fc1 = nn.Linear(394440, num_out_feat) # 394440 for full, 87150 for half, 15960 for quarter
+        self.fc1 = nn.Linear(87150, num_out_feat) # 394440 for full, 87150 for half, 15960 for quarter
         self.fc2 = nn.Linear(num_out_feat, 1 )
         self.double()
 
@@ -147,6 +159,7 @@ class CNN(nn.Module):
         h = self.conv3(h)
         h = torch.flatten(h, 1)
         h = self.fc1(h)
+        h = act_f(h)
         output = self.fc2(h)
         return output
 
@@ -167,6 +180,7 @@ for epoch in range(num_train_epoch):
     for x, y in train_dataloader:
         pred = torch.squeeze(model(x))
         
+        """
         if loss_function == 'MSE':
             loss = mse(pred, y)
         elif loss_function == 'MAE':
@@ -187,9 +201,10 @@ for epoch in range(num_train_epoch):
             loss = balanced_mse(pred, y)
         else:
             pass
+        """
         
         print('pred: ', pred)
-        print('y: ', y)
+        #print('y: ', y)
         print()
         loss_func = nn.MSELoss()
         loss = loss_func(pred, y)
@@ -229,7 +244,7 @@ torch.save({
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optim.state_dict(),
             'loss': loss
-            }, models_path + 'checkpoint_SSTASODA_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.tar')
+            }, models_path + 'checkpoint_SSTASaltSODAHalf_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.tar')
 
 print("Save the checkpoint in a TAR file.")
 print("----------")
@@ -265,7 +280,7 @@ all_perform_dict = {
   'all_eval': all_eval.tolist(),
   'all_epoch': all_epoch.tolist()}
 
-with open(out_path + 'perform_SSTASODA_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.txt', "w") as file:
+with open(out_path + 'perform_SSTASaltSODAHalf_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.txt', "w") as file:
     file.write(json.dumps(all_perform_dict))
 
 print("Save the performance in a TXT file.")
@@ -282,7 +297,7 @@ ax.legend(handles=[patch_a, patch_b])
 month = np.arange(0, len(ys), 1, dtype=int)
 ax.plot(month, np.array(preds), 'o', color='C0')
 ax.plot(month, np.array(ys), 'o', color='C1')
-plt.savefig(out_path + 'pred_a_SSTASODA_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+plt.savefig(out_path + 'pred_a_SSTASaltSODAHalf_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
 
 fig, ax = plt.subplots(figsize=(12, 8))
 ax.set_xlim([-2, 2])
@@ -295,7 +310,7 @@ line = mlines.Line2D([0, 1], [0, 1], color='red')
 transform = ax.transAxes
 line.set_transform(transform)
 ax.add_line(line)
-plt.savefig(out_path + 'pred_b_SSTASODA_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+plt.savefig(out_path + 'pred_b_SSTASaltSODAHalf_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
     
 print("Save the observed vs. predicted plots.")
 print("----------")
@@ -310,7 +325,7 @@ plt.legend(handles=[blue_patch, orange_patch])
 plt.xlabel('Epoch')
 plt.ylabel('Value')
 plt.title('Performance')
-plt.savefig(out_path + 'perform_SSTASODA_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+plt.savefig(out_path + 'perform_SSTASaltSODAHalf_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
 
 print("Save the loss vs. evaluation metric plot.")
 print("--------------------")
