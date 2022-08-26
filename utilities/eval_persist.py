@@ -10,10 +10,10 @@ import matplotlib.lines as mlines
 train_split = 0.8
 lead_time = 1
 
-data_path = 'data/'
-out_path = 'out/'
+data_path = "data/"
+out_path = "out/"
 
-y = load(data_path + 'y.npy')
+y = load(data_path + "y.npy")
 
 for lead_time in [1]:
 
@@ -30,22 +30,22 @@ for lead_time in [1]:
     test_mse = mean_squared_error(ys, preds, squared=True)
     test_rmse = mean_squared_error(ys, preds, squared=False)
     
-    print('Test MSE:', test_mse)
+    print("Test MSE:", test_mse)
     print("----------")
     print()
     
     fig, ax = plt.subplots(figsize=(12, 8))
     ax.set_xlim([-2, 2])
     ax.set_ylim([-2, 2])
-    plt.xlabel('Observation')
-    plt.ylabel('Prediction')
-    plt.title('MSE: ' + str(round(test_mse, 4)), fontsize=12)
-    ax.plot(np.array(ys), np.array(preds), 'o', color='C0')
-    line = mlines.Line2D([0, 1], [0, 1], color='red')
+    plt.xlabel("Observation")
+    plt.ylabel("Prediction")
+    plt.title("MSE: " + str(round(test_mse, 4)), fontsize=12)
+    ax.plot(np.array(ys), np.array(preds), "o", color="C0")
+    line = mlines.Line2D([0, 1], [0, 1], color="red")
     transform = ax.transAxes
     line.set_transform(transform)
     ax.add_line(line)
-    plt.savefig(out_path + 'plot_persist_SSTA_leadtime_' + str(lead_time) + '_numsample_1679_trainsplit_0.8.png')
+    plt.savefig(out_path + "plot_persist_SSTA_leadtime_" + str(lead_time) + "_numsample_1679_trainsplit_0.8.png")
     
     print("Save the observed vs. predicted plot.")
     print("--------------------")

@@ -7,7 +7,7 @@ import xarray as xr
 
 # Read the dataset.
 
-soda = xr.open_dataset('data/soda_224_pt_l5.nc', decode_times=False)
+soda = xr.open_dataset("data/soda_224_pt_l5.nc", decode_times=False)
 print("SODA v2.2.4:")
 print(soda)
 print("--------------------")
@@ -15,7 +15,7 @@ print()
 
 # Turn it into a smaller size.
 
-soda_array = soda.to_array(dim='VARIABLE')
+soda_array = soda.to_array(dim="VARIABLE")
 soda_smaller = np.array(soda_array[:,:,:,:,:,:])
 soda_smaller = soda_smaller[2,:,0,:,::20,::20] # Drop the bnds dimension and the other two variables; take every 20th longitude and latitude.
 soda_smaller = np.squeeze(soda_smaller, axis=0)
@@ -76,20 +76,25 @@ def get_ssta(time_series):
 
 # Create the other output (y) vectors.
 
-soda_westaus = soda.loc[dict(LAT='-29.75', LONN359_360='112.75')]
+soda_westaus = soda.loc[dict(LAT="-29.75", LONN359_360="112.75")]
 soda_westaus_sst = np.zeros((len(soda.TIME), 1))
 soda_westaus_sst[:,:] = soda_westaus.variables["TEMP"][:,:]
 soda_westaus_ssta = get_ssta(soda_westaus_sst)
 
-soda_labrador = soda.loc[dict(LAT='53.75', LONN359_360='-54.25')]
+soda_labrador = soda.loc[dict(LAT="53.75", LONN359_360="-54.25")]
 soda_labrador_sst = np.zeros((len(soda.TIME), 1))
 soda_labrador_sst[:,:] = soda_labrador.variables["TEMP"][:,:]
 soda_labrador_ssta = get_ssta(soda_labrador_sst)
 
-soda_equapacific = soda.loc[dict(LAT='-0.25', LONN359_360='-120.75')]
+soda_equapacific = soda.loc[dict(LAT="-0.25", LONN359_360="-120.75")]
 soda_equapacific_sst = np.zeros((len(soda.TIME), 1))
 soda_equapacific_sst[:,:] = soda_equapacific.variables["TEMP"][:,:]
 soda_equapacific_ssta = get_ssta(soda_equapacific_sst)
+
+soda_eastaus = soda.loc[dict(LAT="-37.25", LONN359_360="151.25")]
+soda_eastaus_sst = np.zeros((len(soda.TIME), 1))
+soda_eastaus_sst[:,:] = soda_eastaus.variables["TEMP"][:,:]
+soda_eastaus_ssta = get_ssta(soda_eastaus_sst)
 
 print("Output vector:")
 print(soda_westaus_ssta)
@@ -100,10 +105,11 @@ print()
 
 # Save the output vector.
 
-data_path = 'data/'
-save(data_path + 'y_westaus.npy', soda_westaus_ssta)
-save(data_path + 'y_labrador.npy', soda_labrador_ssta)
-save(data_path + 'y_equapacific.npy', soda_equapacific_ssta)
+data_path = "data/"
+save(data_path + "y_westaus.npy", soda_westaus_ssta)
+save(data_path + "y_labrador.npy", soda_labrador_ssta)
+save(data_path + "y_equapacific.npy", soda_equapacific_ssta)
+save(data_path + "y_eastaus.npy", soda_eastaus_ssta)
 
 print("Save the output vectors in NPY files.")
 print("--------------------")

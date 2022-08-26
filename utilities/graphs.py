@@ -6,9 +6,9 @@ import dgl
 from dgl.data import DGLDataset
 from dgl import save_graphs
 
-data_path = 'data/'
-models_path = 'out/'
-out_path = 'out/'
+data_path = "data/"
+models_path = "out/"
+out_path = "out/"
 
 window_size = 5
 lead_time = 1
@@ -16,9 +16,9 @@ num_sample = 1680-window_size-lead_time+1
 
 # Transform the graphs into the DGL forms.
 
-node_features = load(data_path + 'node_features.npy')
-edge_features = load(data_path + 'edge_features.npy')
-y = load(data_path + 'y.npy')
+node_features = load(data_path + "node_features.npy")
+edge_features = load(data_path + "edge_features.npy")
+y = load(data_path + "y.npy")
 
 node_num = node_features.shape[0]
 
@@ -42,7 +42,7 @@ graph.ndata["feat"] = torch.tensor(node_features)
 print("DGL node feature matrix:")
 print(graph.ndata["feat"])
 print("Shape of DGL node feature matrix:")
-print(graph.ndata['feat'].shape)
+print(graph.ndata["feat"].shape)
 print("----------")
 print()
 
@@ -53,17 +53,17 @@ for i in range(node_num):
     if i != j:
       w.append(edge_features[i][j])
 
-graph.edata['w'] = torch.tensor(w)
+graph.edata["w"] = torch.tensor(w)
 
 print("DGL edge feature matrix:")
-print(graph.edata['w'])
+print(graph.edata["w"])
 print("Shape of DGL edge feature matrix:")
-print(graph.edata['w'].shape)
+print(graph.edata["w"].shape)
 
 print("----------")
 print()
 
-save_graphs(data_path + 'graph.bin', graph)
+save_graphs(data_path + "graph.bin", graph)
 
 print("Save the graph in a BIN file.")
 print("--------------------")
@@ -74,7 +74,7 @@ class SSTAGraphDataset(DGLDataset):
     Create a DGL graph dataset.
     """
     def __init__(self):
-        super().__init__(name='synthetic')
+        super().__init__(name="synthetic")
 
     def process(self):
     
@@ -83,8 +83,8 @@ class SSTAGraphDataset(DGLDataset):
         
         for i in range(num_sample):
           graph_temp = dgl.graph((u, v))
-          graph_temp.ndata['feat'] = torch.tensor(node_features[:, i:i+window_size])
-          graph_temp.edata['w'] = graph.edata['w']
+          graph_temp.ndata["feat"] = torch.tensor(node_features[:, i:i+window_size])
+          graph_temp.edata["w"] = graph.edata["w"]
           self.graphs.append(graph_temp)
           
           y_temp = y[i+window_size+lead_time-1]

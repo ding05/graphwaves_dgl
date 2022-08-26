@@ -1,4 +1,4 @@
-from loss import *
+from losses import *
 
 import numpy as np
 from numpy import asarray, save, load
@@ -27,16 +27,16 @@ import matplotlib.transforms as mtransforms
 
 # CNN configurations
 
-net_class = 'CNN' #
+net_class = "CNN" #
 num_layer = 3 #
 num_hid_feat = 30 #
 num_out_feat = 500 #
 window_size = 3
 train_split = 0.8
 lead_time = 1
-loss_function = 'MSE' # 'MSE', 'MAE', 'Huber', 'WMSE', 'WMAE', 'WHuber', 'WFMSE', 'WFMAE', 'BMSE
-activation = 'tanh' # 'relu', 'tanh' 
-optimizer = 'RMSP' # SGD, Adam
+loss_function = "MSE" # "MSE", "MAE", "Huber", "WMSE", "WMAE", "WHuber", "WFMSE", "WFMAE", "BMSE
+activation = "tanh" # "relu", "tanh" 
+optimizer = "RMSP" # SGD, Adam
 learning_rate = 0.001 # 0.05, 0.02, 0.01
 momentum = 0.9
 weight_decay = 0
@@ -44,21 +44,21 @@ batch_size = 540 # >= 120 crashed for original size, >= 550 crashed for half siz
 num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
 num_train_epoch = 400
 
-data_path = 'data/'
-models_path = 'out/'
-out_path = 'out/'
+data_path = "data/"
+models_path = "out/"
+out_path = "out/"
 
 """
 # If running this script for the first time, process the dataset.
 
-soda = xr.open_dataset('data/soda_224_pt_l5.nc', decode_times=False)
+soda = xr.open_dataset("data/soda_224_pt_l5.nc", decode_times=False)
 
-soda_array = soda.to_array(dim='VARIABLE')
+soda_array = soda.to_array(dim="VARIABLE")
 soda_smaller = np.array(soda_array[:,:,:,:,:,:])
 soda_smaller = soda_smaller[2,:,0,:,::4,::4] # Drop the bnds dimension and the other two variables; take every 4th longitude and latitude.
 soda_smaller = np.squeeze(soda_smaller, axis=0)
 
-save(data_path + 'grids_quarter.npy', soda_smaller)
+save(data_path + "grids_quarter.npy", soda_smaller)
 
 print("Save the grids in an NPY file")
 print("--------------------")
@@ -68,22 +68,22 @@ print()
 """
 # If running this script for the first time, process the dataset to get a smaller grid around Bay of Plenty.
 
-soda = xr.open_dataset('data/soda_224_pt_l5.nc', decode_times=False)
+soda = xr.open_dataset("data/soda_224_pt_l5.nc", decode_times=False)
 
-soda['LONN359_360'] = soda.LONN359_360 + 180
+soda["LONN359_360"] = soda.LONN359_360 + 180
 
 soda_bop = soda.where(soda.LAT < 0, drop=True)
 soda_bop = soda_bop.where(soda.LAT > -70, drop=True)
 soda_bop = soda_bop.where(soda.LONN359_360 > 107, drop=True)
 soda_bop = soda_bop.where(soda.LONN359_360 < 247, drop=True)
 
-soda_array_bop = soda_bop.to_array(dim='VARIABLE')
+soda_array_bop = soda_bop.to_array(dim="VARIABLE")
 soda_smaller_bop = np.array(soda_array_bop[:,:,:,:,:,:])
 soda_smaller_bop = soda_smaller_bop[2,:,0,:,::,::] # Drop the bnds dimension and the other two variables.
 soda_smaller_bop = np.squeeze(soda_smaller_bop, axis=0)
 soda_smaller_bop = np.transpose(soda_smaller_bop, (2, 0, 1))
 
-save(data_path + 'grids_bop.npy', soda_smaller_bop)
+save(data_path + "grids_bop.npy", soda_smaller_bop)
 
 print("Save the grids in an NPY file")
 print("--------------------")
@@ -92,9 +92,9 @@ print()
 
 # Load the grids.
 
-grids = load(data_path + 'grids_half.npy')
-#grids_salt = load(data_path + 'grids_salt_half.npy')
-y = load(data_path + 'y.npy')
+grids = load(data_path + "grids_half.npy")
+#grids_salt = load(data_path + "grids_salt_half.npy")
+y = load(data_path + "y.npy")
 
 y = y.squeeze(axis=1)
 
@@ -116,7 +116,7 @@ for i in range(len(y)-window_size-lead_time):
   dataset.append([torch.tensor(np.concatenate((grids[i:i+window_size], grids_salt[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
 """
 
-#print('Dataset:', dataset[0][0].shape)
+#print("Dataset:", dataset[0][0].shape)
 
 print("--------------------")
 print()
@@ -181,30 +181,30 @@ for epoch in range(num_train_epoch):
         pred = torch.squeeze(model(x))
         
         """
-        if loss_function == 'MSE':
+        if loss_function == "MSE":
             loss = mse(pred, y)
-        elif loss_function == 'MAE':
+        elif loss_function == "MAE":
             loss = mae(pred, y)
-        elif loss_function == 'Huber':
+        elif loss_function == "Huber":
             loss = huber(pred, y)
-        elif loss_function == 'WMSE':
+        elif loss_function == "WMSE":
             loss = weighted_mse(pred, y)
-        elif loss_function == 'WMAE':
+        elif loss_function == "WMAE":
             loss = weighted_mae(pred, y)
-        elif loss_function == 'WHuber':
+        elif loss_function == "WHuber":
             loss = weighted_huber(pred, y)                
-        elif loss_function == 'WFMSE':
+        elif loss_function == "WFMSE":
             loss = weighted_focal_mse(pred, y)  
-        elif loss_function == 'WFMAE':
+        elif loss_function == "WFMAE":
             loss = weighted_focal_mae(pred, y)              
-        elif loss_function == 'BMSE':
+        elif loss_function == "BMSE":
             loss = balanced_mse(pred, y)
         else:
             pass
         """
         
-        print('pred: ', pred)
-        #print('y: ', y)
+        print("pred: ", pred)
+        #print("y: ", y)
         print()
         loss_func = nn.MSELoss()
         loss = loss_func(pred, y)
@@ -214,7 +214,7 @@ for epoch in range(num_train_epoch):
         losses.append(loss.cpu().detach().numpy())
     print("----------")
     print()
-    print('Training loss:', sum(losses) / len(losses))
+    print("Training loss:", sum(losses) / len(losses))
     print()
     all_loss.append(sum(losses) / len(losses))
 
@@ -225,7 +225,7 @@ for epoch in range(num_train_epoch):
         preds.append(pred.cpu().detach().numpy())
         ys.append(y.cpu().detach().numpy())
     val_mse = mean_squared_error(np.array(ys), np.array(preds), squared=True)
-    print('Validation MSE:', val_mse)
+    print("Validation MSE:", val_mse)
     print()
     all_eval.append(val_mse)
 
@@ -235,16 +235,16 @@ for epoch in range(num_train_epoch):
 # End time
 stop = time.time()
 
-print(f'Complete training. Time spent: {stop - start} seconds.')
+print(f"Complete training. Time spent: {stop - start} seconds.")
 print("----------")
 print()
 
 torch.save({
-            'epoch': num_train_epoch,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optim.state_dict(),
-            'loss': loss
-            }, models_path + 'checkpoint_SSTASaltSODAHalf_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.tar')
+            "epoch": num_train_epoch,
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optim.state_dict(),
+            "loss": loss
+            }, models_path + "checkpoint_SSTASaltSODAHalf_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".tar")
 
 print("Save the checkpoint in a TAR file.")
 print("----------")
@@ -264,7 +264,7 @@ test_rmse = mean_squared_error(np.array(ys), np.array(preds), squared=False)
 print("----------")
 print()
 
-print('Final validation / test MSE:', test_mse)
+print("Final validation / test MSE:", test_mse)
 print("----------")
 print()
 
@@ -275,12 +275,12 @@ all_eval = np.array(all_eval)
 all_epoch = np.array(list(range(1, num_train_epoch+1)))
 
 all_perform_dict = {
-  'training_time': str(stop-start),
-  'all_loss': all_loss.tolist(),
-  'all_eval': all_eval.tolist(),
-  'all_epoch': all_epoch.tolist()}
+  "training_time": str(stop-start),
+  "all_loss": all_loss.tolist(),
+  "all_eval": all_eval.tolist(),
+  "all_epoch": all_epoch.tolist()}
 
-with open(out_path + 'perform_SSTASaltSODAHalf_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.txt', "w") as file:
+with open(out_path + "perform_SSTASaltSODAHalf_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as file:
     file.write(json.dumps(all_perform_dict))
 
 print("Save the performance in a TXT file.")
@@ -288,29 +288,29 @@ print("----------")
 print()
 
 fig, ax = plt.subplots(figsize=(12, 8))
-plt.xlabel('Month')
-plt.ylabel('SSTA')
-plt.title('MSE: ' + str(round(test_mse, 4)), fontsize=12)
-patch_a = mpatches.Patch(color='C0', label='Predicted')
-patch_b = mpatches.Patch(color='C1', label='Observed')
+plt.xlabel("Month")
+plt.ylabel("SSTA")
+plt.title("MSE: " + str(round(test_mse, 4)), fontsize=12)
+patch_a = mpatches.Patch(color="C0", label="Predicted")
+patch_b = mpatches.Patch(color="C1", label="Observed")
 ax.legend(handles=[patch_a, patch_b])
 month = np.arange(0, len(ys), 1, dtype=int)
-ax.plot(month, np.array(preds), 'o', color='C0')
-ax.plot(month, np.array(ys), 'o', color='C1')
-plt.savefig(out_path + 'pred_a_SSTASaltSODAHalf_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+ax.plot(month, np.array(preds), "o", color="C0")
+ax.plot(month, np.array(ys), "o", color="C1")
+plt.savefig(out_path + "pred_a_SSTASaltSODAHalf_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
 
 fig, ax = plt.subplots(figsize=(12, 8))
 ax.set_xlim([-2, 2])
 ax.set_ylim([-2, 2])
-plt.xlabel('Observation')
-plt.ylabel('Prediction')
-plt.title('MSE: ' + str(round(test_mse, 4)), fontsize=12)
-ax.plot(np.array(ys), np.array(preds), 'o', color='C0')
-line = mlines.Line2D([0, 1], [0, 1], color='red')
+plt.xlabel("Observation")
+plt.ylabel("Prediction")
+plt.title("MSE: " + str(round(test_mse, 4)), fontsize=12)
+ax.plot(np.array(ys), np.array(preds), "o", color="C0")
+line = mlines.Line2D([0, 1], [0, 1], color="red")
 transform = ax.transAxes
 line.set_transform(transform)
 ax.add_line(line)
-plt.savefig(out_path + 'pred_b_SSTASaltSODAHalf_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+plt.savefig(out_path + "pred_b_SSTASaltSODAHalf_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
     
 print("Save the observed vs. predicted plots.")
 print("----------")
@@ -319,13 +319,13 @@ print()
 plt.figure()
 plt.plot(all_epoch, all_loss)
 plt.plot(all_epoch, all_eval)
-blue_patch = mpatches.Patch(color='C0', label='Loss: ' + str(loss_function))
-orange_patch = mpatches.Patch(color='C1', label='Validation Metric: ' + 'MSE')
+blue_patch = mpatches.Patch(color="C0", label="Loss: " + str(loss_function))
+orange_patch = mpatches.Patch(color="C1", label="Validation Metric: " + "MSE")
 plt.legend(handles=[blue_patch, orange_patch])
-plt.xlabel('Epoch')
-plt.ylabel('Value')
-plt.title('Performance')
-plt.savefig(out_path + 'perform_SSTASaltSODAHalf_' + str(net_class) + '_' + str(num_hid_feat) + '_' + str(num_out_feat) + '_' + str(window_size) + '_' + str(lead_time) + '_' + str(num_sample) + '_' + str(train_split) + '_' + str(loss_function) + '_' + str(optimizer) + '_' + str(activation) + '_' + str(learning_rate) + '_' + str(momentum) + '_' + str(weight_decay) + '_' + str(batch_size) + '_' + str(num_train_epoch) + '.png')
+plt.xlabel("Epoch")
+plt.ylabel("Value")
+plt.title("Performance")
+plt.savefig(out_path + "perform_SSTASaltSODAHalf_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
 
 print("Save the loss vs. evaluation metric plot.")
 print("--------------------")
