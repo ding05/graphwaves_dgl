@@ -1,4 +1,4 @@
-from utilities.loss import *
+from utilities.losses import *
 from utilities.graphs import *
 from utilities.gnns import *
 
@@ -10,6 +10,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data.sampler import SubsetRandomSampler, SequentialSampler
+from torch.autograd import Variable
 
 import dgl
 import dgl.nn as dglnn
@@ -35,7 +36,7 @@ for loss_function in ['MSE', 'MAE', 'Huber', 'WMSE', 'WMAE', 'WHuber', 'WFMSE', 
     # GNN configurations
     
     net_class = 'GCN' # 'GAT'
-    num_layer = '3'
+    num_layer = 3
     num_hid_feat = 200
     num_out_feat = 100
     window_size = 5
@@ -145,6 +146,18 @@ for loss_function in ['MSE', 'MAE', 'Huber', 'WMSE', 'WMAE', 'WHuber', 'WFMSE', 
                 loss = balanced_mse(pred, y)
             else:
                 pass
+            
+            """
+            # Add L1 regularization.
+            l1_crit = nn.L1Loss(size_average=False)
+            reg_loss = 0
+            target = Variable(torch.from_numpy(np.zeros((200,100))))
+            for param in model.parameters():
+              reg_loss += l1_crit(param, target)
+            factor = 0.0005
+            loss += factor * reg_loss
+            """
+            
             optim.zero_grad()
             loss.backward()
             optim.step()

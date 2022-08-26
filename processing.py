@@ -9,7 +9,7 @@ from sklearn.metrics.pairwise import haversine_distances
 
 # Read the dataset.
 
-soda = xr.open_dataset('data/soda_224_pt_l5.nc', decode_times=False)
+soda = xr.open_dataset("data/soda_224_pt_l5.nc", decode_times=False)
 print("SODA v2.2.4:")
 print(soda)
 print("--------------------")
@@ -17,7 +17,7 @@ print()
 
 # Turn it into a smaller size.
 
-soda_array = soda.to_array(dim='VARIABLE')
+soda_array = soda.to_array(dim="VARIABLE")
 soda_smaller = np.array(soda_array[:,:,:,:,:,:])
 soda_smaller = soda_smaller[2,:,0,:,::20,::20] # Drop the bnds dimension and the other two variables; take every 20th longitude and latitude.
 soda_smaller = np.squeeze(soda_smaller, axis=0)
@@ -91,9 +91,9 @@ print()
 
 # Save the two output matrices.
 
-data_path = 'data/'
-save(data_path + 'node_features.npy', soda_smaller_ocean_flattened)
-save(data_path + 'edge_features.npy', distance_ocean_recip)
+data_path = "data/"
+save(data_path + "node_features.npy", soda_smaller_ocean_flattened)
+save(data_path + "edge_features.npy", distance_ocean_recip)
 
 print("Save the two matrices in NPY files.")
 print("--------------------")
@@ -138,7 +138,7 @@ print(soda_ssta.shape)
 print("----------")
 print()
 
-save(data_path + 'node_features.npy', soda_ssta)
+save(data_path + "node_features.npy", soda_ssta)
 
 print("Update the node feature matrix and saving it in an NPY file.")
 print("--------------------")
@@ -146,7 +146,7 @@ print()
 
 # Create the output (y) vector.
 
-soda_bop = soda.loc[dict(LAT='-34.75', LONN359_360='177.75')]
+soda_bop = soda.loc[dict(LAT="-34.75", LONN359_360="177.75")]
 soda_bop_sst = np.zeros((len(soda.TIME), 1))
 soda_bop_sst[:,:] = soda_bop.variables["TEMP"][:,:]
 
@@ -161,7 +161,7 @@ print()
 
 # Save the output vector.
 
-save(data_path + 'y.npy', soda_bop_ssta)
+save(data_path + "y.npy", soda_bop_ssta)
 
 print("Save the output vector in an NPY file.")
 print("--------------------")
