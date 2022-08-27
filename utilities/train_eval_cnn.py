@@ -31,18 +31,22 @@ net_class = "CNN" #
 num_layer = 3 #
 num_hid_feat = 30 #
 num_out_feat = 500 #
-window_size = 3
+window_size = 5
 train_split = 0.8
 lead_time = 1
-loss_function = "MSE" # "MSE", "MAE", "Huber", "WMSE", "WMAE", "WHuber", "WFMSE", "WFMAE", "BMSE
-activation = "tanh" # "relu", "tanh" 
-optimizer = "RMSP" # SGD, Adam
-learning_rate = 0.001 # 0.05, 0.02, 0.01
+noise_var = 0.01
+loss_function = "BMSE" + str(noise_var) # "MSE", "MAE", "Huber", "WMSE", "WMAE", "WHuber", "WFMSE", "WFMAE", "BMSE
+negative_slope = 0.1
+activation = "lrelu" + str(negative_slope) # "relu", "tanh", "sigm"
+alpha = 0.9
+optimizer = "RMSP" + str(alpha) # SGD, Adam
+learning_rate = 0.005 # 0.05, 0.02, 0.01
 momentum = 0.9
-weight_decay = 0
-batch_size = 540 # >= 120 crashed for original size, >= 550 crashed for half size, >= 480 crashed for half size and two variables
+weight_decay = 0.01
+dropout = "nd"
+batch_size = 512 # >= 120 crashed for original size, >= 550 crashed for half size, >= 480 crashed for half size and two variables
 num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
-num_train_epoch = 400
+num_train_epoch = 2
 
 data_path = "data/"
 models_path = "out/"
@@ -150,21 +154,20 @@ class CNN(nn.Module):
 
     def forward(self, x):
         h = self.conv1(x)
-        act_f = nn.Tanh()
-        h = act_f(h)
+        h = F.leaky_relu(h, negative_slope)
         h = self.pool1(h)
         h = self.conv2(h)
-        h = act_f(h)
+        h = F.leaky_relu(h, negative_slope)
         h = self.pool2(h)
         h = self.conv3(h)
         h = torch.flatten(h, 1)
         h = self.fc1(h)
-        h = act_f(h)
+        h = F.leaky_relu(h, negative_slope)
         output = self.fc2(h)
         return output
 
 model = CNN()
-optim = torch.optim.RMSprop(model.parameters(), lr=learning_rate, alpha=0.9)
+optim = torch.optim.RMSprop(model.parameters(), lr=learning_rate, alpha=alpha, weight_decay=weight_decay, momentum=momentum)
 
 # Start time
 start = time.time()
@@ -280,52 +283,85 @@ all_perform_dict = {
   "all_eval": all_eval.tolist(),
   "all_epoch": all_epoch.tolist()}
 
-with open(out_path + "perform_SSTASaltSODAHalf_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as file:
+with open(out_path + "perform_SSTASODABoP_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as file:
     file.write(json.dumps(all_perform_dict))
 
 print("Save the performance in a TXT file.")
 print("----------")
 print()
 
-fig, ax = plt.subplots(figsize=(12, 8))
-plt.xlabel("Month")
-plt.ylabel("SSTA")
-plt.title("MSE: " + str(round(test_mse, 4)), fontsize=12)
-patch_a = mpatches.Patch(color="C0", label="Predicted")
-patch_b = mpatches.Patch(color="C1", label="Observed")
-ax.legend(handles=[patch_a, patch_b])
-month = np.arange(0, len(ys), 1, dtype=int)
-ax.plot(month, np.array(preds), "o", color="C0")
-ax.plot(month, np.array(ys), "o", color="C1")
-plt.savefig(out_path + "pred_a_SSTASaltSODAHalf_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
+# Increase the fontsize.
+plt.rcParams.update({"font.size": 20})
+
+# Calculate the threshold for 90th percentile and mark the outliers.
+y = load(data_path + "y.npy").squeeze(axis=1)
+y_train = y[:int(len(y)*0.8)]
+y_train_sorted = np.sort(y_train)
+threshold = y_train_sorted[int(len(y_train_sorted)*0.9):][0]
+y_outliers = []
+pred_outliers = []
+for i in range(len(ys)):
+  if ys[i] >= threshold:
+    y_outliers.append(ys[i])
+    pred_outliers.append(preds[i])
+  else:
+    y_outliers.append(None)
+    pred_outliers.append(None)
+
+# Calculate the outlier MSE; remove the NAs.
+temp_y_outliers = [i for i in y_outliers if i is not None]
+temp_pred_outliers = [i for i in pred_outliers if i is not None]
+ol_test_mse = mean_squared_error(np.array(temp_y_outliers), np.array(temp_pred_outliers), squared=True)
 
 fig, ax = plt.subplots(figsize=(12, 8))
-ax.set_xlim([-2, 2])
-ax.set_ylim([-2, 2])
-plt.xlabel("Observation")
-plt.ylabel("Prediction")
-plt.title("MSE: " + str(round(test_mse, 4)), fontsize=12)
-ax.plot(np.array(ys), np.array(preds), "o", color="C0")
-line = mlines.Line2D([0, 1], [0, 1], color="red")
+plt.xlabel("Month")
+plt.ylabel("SST Residual")
+plt.title("MSE: " + str(round(test_mse, 4)) + ", Upper 10% MSE: " + str(round(ol_test_mse, 4)))
+patch_a = mpatches.Patch(color="pink", label="Obs")
+patch_b = mpatches.Patch(color="red", label="Upper 10% Obs")
+patch_c = mpatches.Patch(color="skyblue", label="Pred")
+patch_d = mpatches.Patch(color="blue", label="Pred for Upper 10% Obs")
+ax.legend(handles=[patch_a, patch_b, patch_c, patch_d])
+month = np.arange(0, len(ys), 1, dtype=int)
+plt.plot(month, np.array(ys, dtype=object), linestyle="-", color="pink")
+ax.plot(month, np.array(ys, dtype=object), "o", color="pink")
+ax.plot(month, np.array(y_outliers, dtype=object), "o", color="red")
+plt.plot(month, np.array(preds, dtype=object), linestyle="-", color="skyblue")
+ax.plot(month, np.array(preds, dtype=object), "o", color="skyblue")
+ax.plot(month, np.array(pred_outliers, dtype=object), "o", color="blue")
+plt.savefig(out_path + "pred_a_SSTASODABoP_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
+
+fig, ax = plt.subplots(figsize=(12, 8))
+lim = max(np.abs(np.array(preds)).max(), np.abs(np.array(ys)).max())
+ax.set_xlim([-lim-0.1, lim+0.1])
+ax.set_ylim([-lim-0.1, lim+0.1])
+plt.xlabel("Obs SST Residual")
+plt.ylabel("Pred SST Residual")
+plt.title("MSE: " + str(round(test_mse, 4)) + ", Upper 10% MSE: " + str(round(ol_test_mse, 4)))
+ax.plot(np.array(ys, dtype=object), np.array(preds, dtype=object), "o", color="black")
 transform = ax.transAxes
-line.set_transform(transform)
-ax.add_line(line)
-plt.savefig(out_path + "pred_b_SSTASaltSODAHalf_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
+line_a = mlines.Line2D([0, 1], [0, 1], color="red")
+line_a.set_transform(transform)
+ax.add_line(line_a)
+patch_a = mpatches.Patch(color="pink", label="Upper 10% Obs")
+ax.legend(handles=[patch_a])
+ax.axvspan(threshold, max(ys)+0.1, color="pink")
+plt.savefig(out_path + "pred_b_SSTASODABoP_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
     
 print("Save the observed vs. predicted plots.")
 print("----------")
 print()
 
-plt.figure()
+fig, ax = plt.subplots(figsize=(10, 10))
 plt.plot(all_epoch, all_loss)
 plt.plot(all_epoch, all_eval)
 blue_patch = mpatches.Patch(color="C0", label="Loss: " + str(loss_function))
 orange_patch = mpatches.Patch(color="C1", label="Validation Metric: " + "MSE")
-plt.legend(handles=[blue_patch, orange_patch])
+ax.legend(handles=[blue_patch, orange_patch])
 plt.xlabel("Epoch")
 plt.ylabel("Value")
 plt.title("Performance")
-plt.savefig(out_path + "perform_SSTASaltSODAHalf_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
+plt.savefig(out_path + "perform_SSTASODABoP_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
 
 print("Save the loss vs. evaluation metric plot.")
 print("--------------------")
