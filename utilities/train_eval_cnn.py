@@ -101,6 +101,7 @@ grids = load(data_path + "grids_half.npy")
 y = load(data_path + "y.npy")
 
 y = y.squeeze(axis=1)
+y_all = y
 
 # Turn NAs into 0.
 grids[np.isnan(grids)] = 0
@@ -294,8 +295,7 @@ print()
 plt.rcParams.update({"font.size": 20})
 
 # Calculate the threshold for 90th percentile and mark the outliers.
-y = load(data_path + "y.npy").squeeze(axis=1)
-y_train = y[:int(len(y)*0.8)]
+y_train = y_all[:int(len(y_all)*0.8)]
 y_train_sorted = np.sort(y_train)
 threshold = y_train_sorted[int(len(y_train_sorted)*0.9):][0]
 y_outliers = []
@@ -316,11 +316,11 @@ ol_test_mse = mean_squared_error(np.array(temp_y_outliers), np.array(temp_pred_o
 fig, ax = plt.subplots(figsize=(12, 8))
 plt.xlabel("Month")
 plt.ylabel("SST Residual")
-plt.title("MSE: " + str(round(test_mse, 4)) + ", Upper 10% MSE: " + str(round(ol_test_mse, 4)))
+plt.title("MSE: " + str(round(test_mse, 4)) + ", MSE above 90th: " + str(round(ol_test_mse, 4)))
 patch_a = mpatches.Patch(color="pink", label="Obs")
-patch_b = mpatches.Patch(color="red", label="Upper 10% Obs")
+patch_b = mpatches.Patch(color="red", label="Obs above 90th")
 patch_c = mpatches.Patch(color="skyblue", label="Pred")
-patch_d = mpatches.Patch(color="blue", label="Pred for Upper 10% Obs")
+patch_d = mpatches.Patch(color="blue", label="Pred for Obs above 90th")
 ax.legend(handles=[patch_a, patch_b, patch_c, patch_d])
 month = np.arange(0, len(ys), 1, dtype=int)
 plt.plot(month, np.array(ys, dtype=object), linestyle="-", color="pink")
@@ -337,13 +337,13 @@ ax.set_xlim([-lim-0.1, lim+0.1])
 ax.set_ylim([-lim-0.1, lim+0.1])
 plt.xlabel("Obs SST Residual")
 plt.ylabel("Pred SST Residual")
-plt.title("MSE: " + str(round(test_mse, 4)) + ", Upper 10% MSE: " + str(round(ol_test_mse, 4)))
+plt.title("MSE: " + str(round(test_mse, 4)) + ", MSE above 90th: " + str(round(ol_test_mse, 4)))
 ax.plot(np.array(ys, dtype=object), np.array(preds, dtype=object), "o", color="black")
 transform = ax.transAxes
 line_a = mlines.Line2D([0, 1], [0, 1], color="red")
 line_a.set_transform(transform)
 ax.add_line(line_a)
-patch_a = mpatches.Patch(color="pink", label="Upper 10% Obs")
+patch_a = mpatches.Patch(color="pink", label="Obs above 90th")
 ax.legend(handles=[patch_a])
 ax.axvspan(threshold, max(ys)+0.1, color="pink")
 plt.savefig(out_path + "pred_b_SSTASODAHalfBoP_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
