@@ -73,7 +73,7 @@ for lead_time in [1]:
     plt.plot(month, np.array(preds, dtype=object), linestyle="-", color="skyblue")
     ax.plot(month, np.array(preds, dtype=object), "o", color="skyblue")
     ax.plot(month, np.array(pred_outliers, dtype=object), "o", color="blue")
-    plt.savefig(out_path + "pred_a_persist_SSTA_leadtime_" + str(lead_time) + "_numsample_1679_trainsplit_0.8.png")
+    plt.savefig(out_path + "pred_a_SSTASODABoP_persist_" + str(lead_time) + "_1679_0.8.png")
 
     fig, ax = plt.subplots(figsize=(12, 8))
     lim = max(np.abs(np.array(preds)).max(), np.abs(np.array(ys)).max())
@@ -90,7 +90,7 @@ for lead_time in [1]:
     patch_a = mpatches.Patch(color="pink", label="Upper 10% Obs")
     ax.legend(handles=[patch_a])
     ax.axvspan(threshold, max(ys)+0.1, color="pink")
-    plt.savefig(out_path + "pred_b_persist_SSTA_leadtime_" + str(lead_time) + "_numsample_1679_trainsplit_0.8.png")
+    plt.savefig(out_path + "pred_b_SSTASODABoP_persist_" + str(lead_time) + "_1679_0.8.png")
     
     print("Save the observed vs. predicted plot.")
     print("--------------------")

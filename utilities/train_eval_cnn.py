@@ -46,7 +46,7 @@ weight_decay = 0.01
 dropout = "nd"
 batch_size = 512 # >= 120 crashed for original size, >= 550 crashed for half size, >= 480 crashed for half size and two variables
 num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
-num_train_epoch = 2
+num_train_epoch = 400
 
 data_path = "data/"
 models_path = "out/"
@@ -247,7 +247,7 @@ torch.save({
             "model_state_dict": model.state_dict(),
             "optimizer_state_dict": optim.state_dict(),
             "loss": loss
-            }, models_path + "checkpoint_SSTASaltSODAHalf_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".tar")
+            }, models_path + "checkpoint_SSTASODAHalfBoP_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".tar")
 
 print("Save the checkpoint in a TAR file.")
 print("----------")
@@ -283,7 +283,7 @@ all_perform_dict = {
   "all_eval": all_eval.tolist(),
   "all_epoch": all_epoch.tolist()}
 
-with open(out_path + "perform_SSTASODABoP_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as file:
+with open(out_path + "perform_SSTASODAHalfBoP_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as file:
     file.write(json.dumps(all_perform_dict))
 
 print("Save the performance in a TXT file.")
@@ -329,7 +329,7 @@ ax.plot(month, np.array(y_outliers, dtype=object), "o", color="red")
 plt.plot(month, np.array(preds, dtype=object), linestyle="-", color="skyblue")
 ax.plot(month, np.array(preds, dtype=object), "o", color="skyblue")
 ax.plot(month, np.array(pred_outliers, dtype=object), "o", color="blue")
-plt.savefig(out_path + "pred_a_SSTASODABoP_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
+plt.savefig(out_path + "pred_a_SSTASODAHalfBoP_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
 
 fig, ax = plt.subplots(figsize=(12, 8))
 lim = max(np.abs(np.array(preds)).max(), np.abs(np.array(ys)).max())
@@ -346,7 +346,7 @@ ax.add_line(line_a)
 patch_a = mpatches.Patch(color="pink", label="Upper 10% Obs")
 ax.legend(handles=[patch_a])
 ax.axvspan(threshold, max(ys)+0.1, color="pink")
-plt.savefig(out_path + "pred_b_SSTASODABoP_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
+plt.savefig(out_path + "pred_b_SSTASODAHalfBoP_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
     
 print("Save the observed vs. predicted plots.")
 print("----------")
@@ -361,7 +361,7 @@ ax.legend(handles=[blue_patch, orange_patch])
 plt.xlabel("Epoch")
 plt.ylabel("Value")
 plt.title("Performance")
-plt.savefig(out_path + "perform_SSTASODABoP_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
+plt.savefig(out_path + "perform_SSTASODAHalfBoP_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
 
 print("Save the loss vs. evaluation metric plot.")
 print("--------------------")
