@@ -96,6 +96,11 @@ soda_eastaus_sst = np.zeros((len(soda.TIME), 1))
 soda_eastaus_sst[:,:] = soda_eastaus.variables["TEMP"][:,:]
 soda_eastaus_ssta = get_ssta(soda_eastaus_sst)
 
+soda_chatham = soda.loc[dict(LAT="-44.25", LONN359_360="-176.75")]
+soda_chatham_sst = np.zeros((len(soda.TIME), 1))
+soda_chatham_sst[:,:] = soda_chatham.variables["TEMP"][:,:]
+soda_chatham_ssta = get_ssta(soda_chatham_sst)
+
 print("Output vector:")
 print(soda_westaus_ssta)
 print("Shape of output vector:")
@@ -110,6 +115,7 @@ save(data_path + "y_westaus.npy", soda_westaus_ssta)
 save(data_path + "y_labrador.npy", soda_labrador_ssta)
 save(data_path + "y_equapacific.npy", soda_equapacific_ssta)
 save(data_path + "y_eastaus.npy", soda_eastaus_ssta)
+save(data_path + "soda_chatham.npy", soda_chatham_ssta)
 
 print("Save the output vectors in NPY files.")
 print("--------------------")

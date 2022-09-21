@@ -15,7 +15,7 @@ from torch.autograd import Variable
 
 import time
 
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, confusion_matrix
 
 import json
 import matplotlib.pyplot as plt
@@ -27,7 +27,7 @@ import matplotlib.transforms as mtransforms
 
 for lead_time in [1]:
 
-    net_class = "FCN" #
+    net_class = "EnsFCN" #
     num_layer = 2 #
     num_hid_feat = 50 #
     num_out_feat = 1 #
@@ -37,19 +37,19 @@ for lead_time in [1]:
     noise_var = 0.01
     #loss_function = "BMSE" + str(noise_var) # "MSE", "MAE", "Huber", "WMSE", "WMAE", "WHuber", "WFMSE", "WFMAE", "BMSE
     weight = 200
-    loss_function = "CmMAE" + str(weight)
+    loss_function = "CmMAE" + str(weight) + "&MAE"
     #loss_function = "MAE"
     negative_slope = 0.1
     activation = "lrelu" + str(negative_slope) # "relu", "tanh", "sigm"
     alpha = 0.9
     optimizer = "RMSP" + str(alpha) # SGD, Adam
-    learning_rate = 0.005 # 0.05, 0.02, 0.01
+    learning_rate = 0.002 # 0.05, 0.02, 0.01
     momentum = 0.9
     weight_decay = 0.01
     dropout = "nd"
     batch_size = 512 # >= 120 crashed for original size, >= 550 crashed for half size, >= 480 crashed for half size and two variables
     num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
-    num_train_epoch = 200
+    num_train_epoch = 400
     
     data_path = "data/"
     models_path = "out/"
@@ -57,11 +57,11 @@ for lead_time in [1]:
     
     # Load the input.
     
-    loc_name = "BoP"
+    loc_name = "WestAus"
     
-    x = load(data_path + "y.npy")
+    x = load(data_path + "y_westaus.npy")
     x1 = load(data_path + "y_eastaus.npy")
-    y = load(data_path + "y.npy")
+    y = load(data_path + "y_westaus.npy")
     
     x = x.squeeze(axis=1)
     x1 = x1.squeeze(axis=1)
@@ -89,34 +89,46 @@ for lead_time in [1]:
     
     # Set up a FCN.
     
-    class FCN(nn.Module):
+    class FCN_a(nn.Module):
         def __init__(self):
-          super(FCN, self).__init__()
+          super(FCN_a, self).__init__()
           self.fc1 = nn.Linear(window_size * num_var, num_hid_feat)
           self.fc2 = nn.Linear(num_hid_feat, 1)
-          #self.dropout = nn.Dropout(0.25)
           self.double()
         
         def forward(self, x):
           x = self.fc1(x)
           x = F.leaky_relu(x, negative_slope)
-          #x = torch.sigmoid(x)
-          #x = self.dropout(x)
           x = self.fc2(x)
           x = F.leaky_relu(x, negative_slope)
-          #x = torch.sigmoid(x)
           return x
     
-    model = FCN()
-    optim = torch.optim.RMSprop(model.parameters(), lr=learning_rate, alpha=alpha, weight_decay=weight_decay, momentum=momentum)
+    class FCN_n(nn.Module):
+        def __init__(self):
+          super(FCN_n, self).__init__()
+          self.fc1 = nn.Linear(window_size * num_var, num_hid_feat)
+          self.fc2 = nn.Linear(num_hid_feat, 1)
+          self.double()
+        
+        def forward(self, x):
+          x = self.fc1(x)
+          x = F.leaky_relu(x, negative_slope)
+          x = self.fc2(x)
+          x = F.leaky_relu(x, negative_slope)
+          return x
     
-    # Train the model.
+    model_a = FCN_a()
+    model_n = FCN_n()
+    optim_a = torch.optim.RMSprop(model_a.parameters(), lr=learning_rate, alpha=alpha, weight_decay=weight_decay, momentum=momentum)
+    optim_n = torch.optim.RMSprop(model_n.parameters(), lr=learning_rate, alpha=alpha, weight_decay=weight_decay, momentum=momentum)
+    
+    # Train the models.
     
     # Start time
     start = time.time()
     
-    all_loss = []
-    all_eval = []
+    all_loss_a = []
+    all_eval_a = []
     
     for epoch in range(num_train_epoch):
         print("Epoch " + str(epoch))
@@ -130,33 +142,63 @@ for lead_time in [1]:
         threshold = y_train_sorted[int(len(y_train_sorted)*0.9):][0]
         
         for x, y in train_dataloader:
-            pred = torch.squeeze(model(x))
-            #loss_func = nn.MSELoss()
-            #loss_func = nn.L1Loss()
-            #print("pred:", pred)
-            #print("y:", y)
-            #loss = loss_func(pred, y)
+            pred = torch.squeeze(model_a(x))
             loss = cm_weighted_mae(pred, y, threshold=threshold, weight=weight)
-            #loss = balanced_mse(pred, y, noise_var)
-            optim.zero_grad()
+            optim_a.zero_grad()
             loss.backward()
-            optim.step()
+            optim_a.step()
             losses.append(loss.cpu().detach().numpy())
         print()
         print("Training loss:", sum(losses) / len(losses))
         print()
-        all_loss.append(sum(losses) / len(losses))
+        all_loss_a.append(sum(losses) / len(losses))
         
         preds = []
         ys = []
         for x, y in test_dataloader:
-            pred = torch.squeeze(model(x))
+            pred = torch.squeeze(model_a(x))
             preds.append(pred.cpu().detach().numpy())
             ys.append(y.cpu().detach().numpy())
         val_mse = mean_squared_error(np.array(ys), np.array(preds), squared=True)
         print("Test MSE:", val_mse)
         print()
-        all_eval.append(val_mse)
+        all_eval_a.append(val_mse)
+    
+        print("----------")
+        print()
+
+    all_loss_n = []
+    all_eval_n = []
+    
+    for epoch in range(num_train_epoch):
+        print("Epoch " + str(epoch))
+        print()
+        
+        losses = []
+        
+        for x, y in train_dataloader:
+            pred = torch.squeeze(model_n(x))
+            loss_func = nn.L1Loss()
+            loss = loss_func(pred, y)
+            optim_n.zero_grad()
+            loss.backward()
+            optim_n.step()
+            losses.append(loss.cpu().detach().numpy())
+        print()
+        print("Training loss:", sum(losses) / len(losses))
+        print()
+        all_loss_n.append(sum(losses) / len(losses))
+        
+        preds = []
+        ys = []
+        for x, y in test_dataloader:
+            pred = torch.squeeze(model_n(x))
+            preds.append(pred.cpu().detach().numpy())
+            ys.append(y.cpu().detach().numpy())
+        val_mse = mean_squared_error(np.array(ys), np.array(preds), squared=True)
+        print("Test MSE:", val_mse)
+        print()
+        all_eval_n.append(val_mse)
     
         print("----------")
         print()
@@ -164,32 +206,30 @@ for lead_time in [1]:
     # End time
     stop = time.time()
     
-    print(f"Complete training. Time spent: {stop - start} seconds.")
-    print("----------")
-    print()
+    # Test the models.
     
-    torch.save({
-                "epoch": num_train_epoch,
-                "model_state_dict": model.state_dict(),
-                "optimizer_state_dict": optim.state_dict(),
-                "loss": loss
-                }, models_path + "checkpoint_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".tar")
-    
-    print("Save the checkpoint in a TAR file.")
-    print("----------")
-    print()
-    
-    # Test the model.
-    
-    preds = []
+    preds_a = []
     ys = []
     for x, y in test_dataloader:
-        pred = torch.squeeze(model(x))
-        preds.append(pred.cpu().detach().numpy())
+        pred = torch.squeeze(model_a(x))
+        preds_a.append(pred.cpu().detach().numpy())
         ys.append(y.cpu().detach().numpy())
+    
+    preds_n = []
+    for x, y in test_dataloader:
+        pred = torch.squeeze(model_n(x))
+        preds_n.append(pred.cpu().detach().numpy())
+    
+    preds = []
+    for i in range(len(ys)):
+        if ys[i] >= threshold:
+            preds.append(preds_a[i])
+        else:
+            preds.append(preds_n[i])
+
     test_mse = mean_squared_error(np.array(ys), np.array(preds), squared=True)
-    test_rmse = mean_squared_error(np.array(ys), np.array(preds), squared=False)
-        
+    test_rmse = mean_squared_error(np.array(ys), np.array(preds), squared=False)    
+
     print("----------")
     print()
     
@@ -198,23 +238,6 @@ for lead_time in [1]:
     print()
     
     # Show the results.
-    
-    all_loss = np.array(all_loss)
-    all_eval = np.array(all_eval)
-    all_epoch = np.array(list(range(1, num_train_epoch+1)))
-    
-    all_perform_dict = {
-      "training_time": str(stop-start),
-      "all_loss": all_loss.tolist(),
-      "all_eval": all_eval.tolist(),
-      "all_epoch": all_epoch.tolist()}
-    
-    with open(out_path + "perform_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as file:
-        file.write(json.dumps(all_perform_dict))
-    
-    print("Save the performance in a TXT file.")
-    print("----------")
-    print()
     
     # Increase the fontsize.
     plt.rcParams.update({"font.size": 20})
@@ -277,17 +300,31 @@ for lead_time in [1]:
     print("----------")
     print()
     
-    fig, ax = plt.subplots(figsize=(10, 10))
-    plt.plot(all_epoch, all_loss)
-    plt.plot(all_epoch, all_eval)
-    blue_patch = mpatches.Patch(color="C0", label="Loss: " + str(loss_function))
-    orange_patch = mpatches.Patch(color="C1", label="Test Metric: " + "MSE")
-    ax.legend(handles=[blue_patch, orange_patch])
-    plt.xlabel("Epoch")
-    plt.ylabel("Value")
-    plt.title("Performance")
-    plt.savefig(out_path + "perform_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
+    # Confusion matrix
     
-    print("Save the loss vs. evaluation metric plot.")
-    print("--------------------")
-    print()
+    ys_masked = [1 if i >= threshold else 0 for i in ys]
+    preds_masked = [1 if i >= threshold else 0 for i in preds]
+    tn, fp, fn, tp = confusion_matrix(ys_masked, preds_masked).ravel()
+    
+    class_dict = {
+      "Introduction": "Positive: data points >= the 90th percentile (anomalies, associated with marine heatwaves), Negative: others (norms)",
+      "Number of data points": str(len(ys)),
+      "True positive": str(tp),
+      "True negative": str(tn),
+      "True classifications": str(tp+tn),
+      "False positive": str(fp),
+      "False negative": str(fn),
+      "False classifications": str(fp+fn),
+      "True positive rate": str(round(tp/len(ys),4)),
+      "True negative rate": str(round(tn/len(ys),4)),
+      "False positive rate": str(round(fp/len(ys),4)),
+      "False negative rate": str(round(fn/len(ys),4)),      
+      "Accuracy": str(round((tp+tn)/len(ys),4)),
+      "Precision": str(round(tp/(tp+fp),4))
+      }
+    with open(out_path + "classification_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as file:
+        file.write(json.dumps(class_dict))
+    
+    print("Save the classification results in a TXT file.")
+    print("----------")
+    print()    
