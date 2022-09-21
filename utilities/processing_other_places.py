@@ -115,7 +115,7 @@ save(data_path + "y_westaus.npy", soda_westaus_ssta)
 save(data_path + "y_labrador.npy", soda_labrador_ssta)
 save(data_path + "y_equapacific.npy", soda_equapacific_ssta)
 save(data_path + "y_eastaus.npy", soda_eastaus_ssta)
-save(data_path + "soda_chatham.npy", soda_chatham_ssta)
+save(data_path + "y_chatham.npy", soda_chatham_ssta)
 
 print("Save the output vectors in NPY files.")
 print("--------------------")
