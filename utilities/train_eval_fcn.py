@@ -15,7 +15,7 @@ from torch.autograd import Variable
 
 import time
 
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, confusion_matrix
 
 import json
 import matplotlib.pyplot as plt
@@ -36,20 +36,20 @@ for lead_time in [1]:
     lead_time = lead_time
     noise_var = 0.01
     #loss_function = "BMSE" + str(noise_var) # "MSE", "MAE", "Huber", "WMSE", "WMAE", "WHuber", "WFMSE", "WFMAE", "BMSE
-    weight = 200
+    weight = 100
     loss_function = "CmMAE" + str(weight)
     #loss_function = "MAE"
     negative_slope = 0.1
     activation = "lrelu" + str(negative_slope) # "relu", "tanh", "sigm"
     alpha = 0.9
     optimizer = "RMSP" + str(alpha) # SGD, Adam
-    learning_rate = 0.005 # 0.05, 0.02, 0.01
+    learning_rate = 0.002 # 0.05, 0.02, 0.01
     momentum = 0.9
     weight_decay = 0.01
     dropout = "nd"
     batch_size = 512 # >= 120 crashed for original size, >= 550 crashed for half size, >= 480 crashed for half size and two variables
     num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
-    num_train_epoch = 200
+    num_train_epoch = 400
     
     data_path = "data/"
     models_path = "out/"
@@ -129,6 +129,14 @@ for lead_time in [1]:
         y_train_sorted = np.sort(y_train)
         threshold = y_train_sorted[int(len(y_train_sorted)*0.9):][0]
         
+        # Control the weight parameter in the customized MAE loss.
+        if epoch < num_train_epoch * 0.9:
+            cur_weight = weight-((weight-5)/num_train_epoch)*epoch
+            #cur_weight = 1
+        else:
+            cur_weight = 5
+        print("cur_weight:", cur_weight)
+        
         for x, y in train_dataloader:
             pred = torch.squeeze(model(x))
             #loss_func = nn.MSELoss()
@@ -136,7 +144,7 @@ for lead_time in [1]:
             #print("pred:", pred)
             #print("y:", y)
             #loss = loss_func(pred, y)
-            loss = cm_weighted_mae(pred, y, threshold=threshold, weight=weight)
+            loss = cm_weighted_mae(pred, y, threshold=threshold, weight=cur_weight)
             #loss = balanced_mse(pred, y, noise_var)
             optim.zero_grad()
             loss.backward()
@@ -291,3 +299,33 @@ for lead_time in [1]:
     print("Save the loss vs. evaluation metric plot.")
     print("--------------------")
     print()
+
+    # Confusion matrix
+    
+    ys_masked = [1 if i >= threshold else 0 for i in ys]
+    preds_masked = [1 if i >= threshold else 0 for i in preds]
+    tn, fp, fn, tp = confusion_matrix(ys_masked, preds_masked).ravel()
+    
+    class_dict = {
+      "Introduction": "Positive: data points >= the 90th percentile (anomalies, associated with marine heatwaves), Negative: others (norms)",
+      "Number of data points": str(len(ys)),
+      "True positive": str(tp),
+      "True negative": str(tn),
+      "True classifications": str(tp+tn),
+      "False positive": str(fp),
+      "False negative": str(fn),
+      "False classifications": str(fp+fn),
+      "True positive rate": str(round(tp/len(ys),4)),
+      "True negative rate": str(round(tn/len(ys),4)),
+      "False positive rate": str(round(fp/len(ys),4)),
+      "False negative rate": str(round(fn/len(ys),4)),      
+      "Accuracy": str(round((tp+tn)/len(ys),4)),
+      "Precision": str(round(tp/(tp+fp),4)),
+      "Recall": str(round(tp/(tp+fn),4))
+      }
+    with open(out_path + "classification_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as file:
+        file.write(json.dumps(class_dict))
+    
+    print("Save the classification results in a TXT file.")
+    print("----------")
+    print()    

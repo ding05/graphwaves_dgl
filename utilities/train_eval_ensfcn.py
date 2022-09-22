@@ -57,11 +57,11 @@ for lead_time in [1]:
     
     # Load the input.
     
-    loc_name = "WestAus"
+    loc_name = "BoP"
     
-    x = load(data_path + "y_westaus.npy")
+    x = load(data_path + "y.npy")
     x1 = load(data_path + "y_eastaus.npy")
-    y = load(data_path + "y_westaus.npy")
+    y = load(data_path + "y.npy")
     
     x = x.squeeze(axis=1)
     x1 = x1.squeeze(axis=1)
@@ -221,6 +221,9 @@ for lead_time in [1]:
         preds_n.append(pred.cpu().detach().numpy())
     
     preds = []
+    #for i in range(lead_time):
+        #preds.append(sum(preds_n)/len(preds_n))
+    #for i in range(len(ys)-lead_time):
     for i in range(len(ys)):
         if ys[i] >= threshold:
             preds.append(preds_a[i])
@@ -320,7 +323,8 @@ for lead_time in [1]:
       "False positive rate": str(round(fp/len(ys),4)),
       "False negative rate": str(round(fn/len(ys),4)),      
       "Accuracy": str(round((tp+tn)/len(ys),4)),
-      "Precision": str(round(tp/(tp+fp),4))
+      "Precision": str(round(tp/(tp+fp),4)),
+      "Recall": str(round(tp/(tp+fn),4))
       }
     with open(out_path + "classification_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as file:
         file.write(json.dumps(class_dict))
