@@ -1,21 +1,22 @@
 import numpy as np
 from numpy import load
 
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, classification_report
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 
 train_split = 0.8
-lead_time = 1
 
 data_path = "data/"
 out_path = "out/"
 
+loc_name = "BoP"
+
 y = load(data_path + "y.npy")
 
-for lead_time in [1]:
+for lead_time in [6]:
 
     # Create a persistence model.
     
@@ -42,6 +43,7 @@ for lead_time in [1]:
     y_train = y[:int(len(y)*0.8)]
     y_train_sorted = np.sort(y_train)
     threshold = y_train_sorted[int(len(y_train_sorted)*0.9):][0]
+    threshold_weak = y_train_sorted[int(len(y_train_sorted)*0.8):][0]
     y_outliers = []
     pred_outliers = []
     for i in range(len(ys)):
@@ -95,3 +97,19 @@ for lead_time in [1]:
     print("Save the observed vs. predicted plot.")
     print("--------------------")
     print()
+
+    # Confusion matrix
+    
+    ys_masked = ["MHW Weak Indicator (>80th)" if ys[i] >= threshold_weak else "None" for i in range(len(ys))]
+    ys_masked = ["MHW Strong Indicator (>90th)" if ys[i] >= threshold else ys_masked[i] for i in range(len(ys_masked))]
+    preds_masked = ["MHW Weak Indicator (>80th)" if preds[i] >= threshold_weak else "None" for i in range(len(preds))]
+    preds_masked = ["MHW Strong Indicator (>90th)" if preds[i] >= threshold else preds_masked[i] for i in range(len(preds_masked))]
+    
+    classification_results = classification_report(ys_masked, preds_masked, digits=4)
+
+    with open(out_path + "classification_SSTASODA" + loc_name + "_persist_" + str(lead_time) + "_1679_0.8.txt", "w") as f:
+        print(classification_results, file=f)
+    
+    print("Save the classification results in a TXT file.")
+    print("----------")
+    print()    

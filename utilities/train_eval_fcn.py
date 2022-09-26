@@ -15,7 +15,7 @@ from torch.autograd import Variable
 
 import time
 
-from sklearn.metrics import mean_squared_error, confusion_matrix
+from sklearn.metrics import mean_squared_error, confusion_matrix, classification_report
 
 import json
 import matplotlib.pyplot as plt
@@ -25,7 +25,7 @@ import matplotlib.transforms as mtransforms
 
 # FCN configurations
 
-for lead_time in [1]:
+for lead_time in [2]:
 
     net_class = "FCN" #
     num_layer = 2 #
@@ -36,7 +36,7 @@ for lead_time in [1]:
     lead_time = lead_time
     noise_var = 0.01
     #loss_function = "BMSE" + str(noise_var) # "MSE", "MAE", "Huber", "WMSE", "WMAE", "WHuber", "WFMSE", "WFMAE", "BMSE
-    weight = 100
+    weight = 75
     loss_function = "CmMAE" + str(weight)
     #loss_function = "MAE"
     negative_slope = 0.1
@@ -68,6 +68,7 @@ for lead_time in [1]:
     y = y.squeeze(axis=1)
     y_all = y
     num_var = 1
+    #num_var = 2
     
     dataset = []
     
@@ -130,7 +131,7 @@ for lead_time in [1]:
         threshold = y_train_sorted[int(len(y_train_sorted)*0.9):][0]
         
         # Control the weight parameter in the customized MAE loss.
-        if epoch < num_train_epoch * 0.9:
+        if epoch < num_train_epoch * 0.95:
             cur_weight = weight-((weight-5)/num_train_epoch)*epoch
             #cur_weight = 1
         else:
@@ -231,6 +232,7 @@ for lead_time in [1]:
     y_train = y_all[:int(len(y_all)*0.8)]
     y_train_sorted = np.sort(y_train)
     threshold = y_train_sorted[int(len(y_train_sorted)*0.9):][0]
+    threshold_weak = y_train_sorted[int(len(y_train_sorted)*0.8):][0] # The weak threshold for 80th percentile
     y_outliers = []
     pred_outliers = []
     for i in range(len(ys)):
@@ -302,6 +304,7 @@ for lead_time in [1]:
 
     # Confusion matrix
     
+    """
     ys_masked = [1 if i >= threshold else 0 for i in ys]
     preds_masked = [1 if i >= threshold else 0 for i in preds]
     tn, fp, fn, tp = confusion_matrix(ys_masked, preds_masked).ravel()
@@ -325,7 +328,18 @@ for lead_time in [1]:
       }
     with open(out_path + "classification_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as file:
         file.write(json.dumps(class_dict))
+    """
+    
+    ys_masked = ["MHW Weak Indicator (>80th)" if ys[i] >= threshold_weak else "None" for i in range(len(ys))]
+    ys_masked = ["MHW Strong Indicator (>90th)" if ys[i] >= threshold else ys_masked[i] for i in range(len(ys_masked))]
+    preds_masked = ["MHW Weak Indicator (>80th)" if preds[i] >= threshold_weak else "None" for i in range(len(preds))]
+    preds_masked = ["MHW Strong Indicator (>90th)" if preds[i] >= threshold else preds_masked[i] for i in range(len(preds_masked))]
+    
+    classification_results = classification_report(ys_masked, preds_masked, digits=4)
+
+    with open(out_path + "classification_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as f:
+        print(classification_results, file=f)
     
     print("Save the classification results in a TXT file.")
     print("----------")
-    print()    
+    print()
