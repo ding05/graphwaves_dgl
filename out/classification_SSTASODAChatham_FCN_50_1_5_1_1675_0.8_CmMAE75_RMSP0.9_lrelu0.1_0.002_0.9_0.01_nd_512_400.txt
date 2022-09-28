@@ -1,0 +1,10 @@
+                              precision    recall  f1-score   support
+
+MHW Strong Indicator (>90th)     0.3571    0.6667    0.4651        15
+  MHW Weak Indicator (>80th)     0.2667    0.3636    0.3077        33
+                        None     0.9542    0.8711    0.9107       287
+
+                    accuracy                         0.8119       335
+                   macro avg     0.5260    0.6338    0.5612       335
+                weighted avg     0.8597    0.8119    0.8314       335
+
