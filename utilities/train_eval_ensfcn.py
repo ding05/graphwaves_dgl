@@ -15,7 +15,7 @@ from torch.autograd import Variable
 
 import time
 
-from sklearn.metrics import mean_squared_error, confusion_matrix
+from sklearn.metrics import mean_squared_error, confusion_matrix, classification_report
 
 import json
 import matplotlib.pyplot as plt
@@ -43,13 +43,13 @@ for lead_time in [1]:
     activation = "lrelu" + str(negative_slope) # "relu", "tanh", "sigm"
     alpha = 0.9
     optimizer = "RMSP" + str(alpha) # SGD, Adam
-    learning_rate = 0.002 # 0.05, 0.02, 0.01
+    learning_rate = 0.005 # 0.05, 0.02, 0.01
     momentum = 0.9
     weight_decay = 0.01
     dropout = "nd"
     batch_size = 512 # >= 120 crashed for original size, >= 550 crashed for half size, >= 480 crashed for half size and two variables
     num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
-    num_train_epoch = 400
+    num_train_epoch = 200
     
     data_path = "data/"
     models_path = "out/"
@@ -221,9 +221,6 @@ for lead_time in [1]:
         preds_n.append(pred.cpu().detach().numpy())
     
     preds = []
-    #for i in range(lead_time):
-        #preds.append(sum(preds_n)/len(preds_n))
-    #for i in range(len(ys)-lead_time):
     for i in range(len(ys)):
         if ys[i] >= threshold:
             preds.append(preds_a[i])
@@ -249,6 +246,7 @@ for lead_time in [1]:
     y_train = y_all[:int(len(y_all)*0.8)]
     y_train_sorted = np.sort(y_train)
     threshold = y_train_sorted[int(len(y_train_sorted)*0.9):][0]
+    threshold_weak = y_train_sorted[int(len(y_train_sorted)*0.8):][0] # The weak threshold for 80th percentile
     y_outliers = []
     pred_outliers = []
     for i in range(len(ys)):
@@ -302,33 +300,19 @@ for lead_time in [1]:
     print("Save the observed vs. predicted plots.")
     print("----------")
     print()
-    
+
     # Confusion matrix
+
+    ys_masked = ["MHW Weak Indicator (>80th)" if ys[i] >= threshold_weak else "None" for i in range(len(ys))]
+    ys_masked = ["MHW Strong Indicator (>90th)" if ys[i] >= threshold else ys_masked[i] for i in range(len(ys_masked))]
+    preds_masked = ["MHW Weak Indicator (>80th)" if preds[i] >= threshold_weak else "None" for i in range(len(preds))]
+    preds_masked = ["MHW Strong Indicator (>90th)" if preds[i] >= threshold else preds_masked[i] for i in range(len(preds_masked))]
     
-    ys_masked = [1 if i >= threshold else 0 for i in ys]
-    preds_masked = [1 if i >= threshold else 0 for i in preds]
-    tn, fp, fn, tp = confusion_matrix(ys_masked, preds_masked).ravel()
-    
-    class_dict = {
-      "Introduction": "Positive: data points >= the 90th percentile (anomalies, associated with marine heatwaves), Negative: others (norms)",
-      "Number of data points": str(len(ys)),
-      "True positive": str(tp),
-      "True negative": str(tn),
-      "True classifications": str(tp+tn),
-      "False positive": str(fp),
-      "False negative": str(fn),
-      "False classifications": str(fp+fn),
-      "True positive rate": str(round(tp/len(ys),4)),
-      "True negative rate": str(round(tn/len(ys),4)),
-      "False positive rate": str(round(fp/len(ys),4)),
-      "False negative rate": str(round(fn/len(ys),4)),      
-      "Accuracy": str(round((tp+tn)/len(ys),4)),
-      "Precision": str(round(tp/(tp+fp),4)),
-      "Recall": str(round(tp/(tp+fn),4))
-      }
-    with open(out_path + "classification_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as file:
-        file.write(json.dumps(class_dict))
+    classification_results = classification_report(ys_masked, preds_masked, digits=4)
+
+    with open(out_path + "classification_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as f:
+        print(classification_results, file=f)
     
     print("Save the classification results in a TXT file.")
     print("----------")
-    print()    
+    print()

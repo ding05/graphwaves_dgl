@@ -12,11 +12,11 @@ train_split = 0.8
 data_path = "data/"
 out_path = "out/"
 
-loc_name = "BoP"
+loc_name = "Chatham"
 
-y = load(data_path + "y.npy")
+y = load(data_path + "y_chatham.npy")
 
-for lead_time in [6]:
+for lead_time in [1]:
 
     # Create a persistence model.
     
@@ -39,7 +39,7 @@ for lead_time in [6]:
     plt.rcParams.update({"font.size": 20})
     
     # Calculate the threshold for 90th percentile and mark the outliers.
-    y = load(data_path + "y.npy").squeeze(axis=1)
+    y = y.squeeze(axis=1)
     y_train = y[:int(len(y)*0.8)]
     y_train_sorted = np.sort(y_train)
     threshold = y_train_sorted[int(len(y_train_sorted)*0.9):][0]
@@ -75,7 +75,7 @@ for lead_time in [6]:
     plt.plot(month, np.array(preds, dtype=object), linestyle="-", color="skyblue")
     ax.plot(month, np.array(preds, dtype=object), "o", color="skyblue")
     ax.plot(month, np.array(pred_outliers, dtype=object), "o", color="blue")
-    plt.savefig(out_path + "pred_a_SSTASODABoP_persist_" + str(lead_time) + "_1679_0.8.png")
+    plt.savefig(out_path + "pred_a_SSTASODA" + loc_name + "_persist_" + str(lead_time) + "_1679_0.8.png")
 
     fig, ax = plt.subplots(figsize=(12, 8))
     lim = max(np.abs(np.array(preds)).max(), np.abs(np.array(ys)).max())
@@ -92,7 +92,7 @@ for lead_time in [6]:
     patch_a = mpatches.Patch(color="pink", label="Obs above 90th")
     ax.legend(handles=[patch_a])
     ax.axvspan(threshold, max(ys)+0.1, color="pink")
-    plt.savefig(out_path + "pred_b_SSTASODABoP_persist_" + str(lead_time) + "_1679_0.8.png")
+    plt.savefig(out_path + "pred_b_SSTASODA" + loc_name + "_persist_" + str(lead_time) + "_1679_0.8.png")
     
     print("Save the observed vs. predicted plot.")
     print("--------------------")
