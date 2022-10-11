@@ -28,9 +28,9 @@ import matplotlib.transforms as mtransforms
 for lead_time in [1]:
 
     net_class = "CNN" #
-    num_layer = 3 #
+    num_layer = 2 #
     num_hid_feat = 30 #
-    num_out_feat = 500 #
+    num_out_feat = 50 #
     window_size = 5
     train_split = 0.8
     lead_time = lead_time
@@ -44,7 +44,7 @@ for lead_time in [1]:
     activation = "tanh"
     alpha = 0.9
     optimizer = "RMSP" + str(alpha) # SGD, Adam
-    learning_rate = 0.001 # 0.05, 0.02, 0.01
+    learning_rate = 0.0001 # 0.001
     momentum = 0.9
     weight_decay = 0.01
     dropout = "nd"
@@ -152,15 +152,15 @@ for lead_time in [1]:
             super().__init__()
             self.conv1 = nn.Conv2d(window_size, num_hid_feat, 8) # window_size: window size of three, two variables
             self.conv1_bn = nn.BatchNorm2d(num_hid_feat)
-            self.pool1 = nn.MaxPool2d(2)
+            self.pool1 = nn.MaxPool2d(4)
             self.conv2 = nn.Conv2d(num_hid_feat, num_hid_feat, 4)
             self.conv2_bn = nn.BatchNorm2d(num_hid_feat)
             self.pool2 = nn.MaxPool2d(2)
-            self.conv3 = nn.Conv2d(num_hid_feat, num_hid_feat, 4)
-            self.conv3_bn = nn.BatchNorm2d(num_hid_feat)
-            self.fc1 = nn.Linear(15960, num_out_feat) # 394440 for full, 87150 for half, 15960 for quarter
-            #self.fc1_bn = nn.BatchNorm1d(num_out_feat) # # an error, not fixed
-            self.fc2 = nn.Linear(num_out_feat, 1 )
+            #self.conv3 = nn.Conv2d(num_hid_feat, num_hid_feat, 4)
+            #self.conv3_bn = nn.BatchNorm2d(num_hid_feat)
+            self.fc1 = nn.Linear(4800, num_out_feat) # 394440 for full, 87150 for half, 15960 for quarter
+            #self.fc1_bn = nn.BatchNorm1d(num_out_feat)
+            self.fc2 = nn.Linear(num_out_feat, 1)
             self.double()
     
         def forward(self, x):
@@ -174,11 +174,12 @@ for lead_time in [1]:
             #h = F.leaky_relu(h, negative_slope)
             h = torch.tanh(h)
             h = self.pool2(h)
-            h = self.conv3(h)
-            h = self.conv3_bn(h)
+            #h = self.conv3(h)
+            #h = self.conv3_bn(h)
             h = torch.flatten(h, 1)
             h = self.fc1(h)
-            #h = self.fc1_bn(h) # an error, not fi
+            #h = h.swapaxes(0, 1)
+            #h = self.fc1_bn(h)
             #h = F.leaky_relu(h, negative_slope)
             h = torch.tanh(h)
             output = self.fc2(h)
