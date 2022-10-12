@@ -44,7 +44,7 @@ for lead_time in [1]:
     activation = "tanh"
     alpha = 0.9
     optimizer = "RMSP" + str(alpha) # SGD, Adam
-    learning_rate = 0.0001 # 0.001
+    learning_rate = 0.001 # 0.001
     momentum = 0.9
     weight_decay = 0.01
     dropout = "nd"
@@ -288,10 +288,10 @@ for lead_time in [1]:
     all_epoch = np.array(list(range(1, num_train_epoch+1)))
     
     all_perform_dict = {
-      "training_time": str(stop-start),
-      "all_loss": all_loss.tolist(),
-      "all_eval": all_eval.tolist(),
-      "all_epoch": all_epoch.tolist()}
+        "training_time": str(stop-start),
+        "all_loss": all_loss.tolist(),
+        "all_eval": all_eval.tolist(),
+        "all_epoch": all_epoch.tolist()}
     
     with open(out_path + "perform_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as file:
         file.write(json.dumps(all_perform_dict))
@@ -311,12 +311,12 @@ for lead_time in [1]:
     y_outliers = []
     pred_outliers = []
     for i in range(len(ys)):
-      if ys[i] >= threshold:
-        y_outliers.append(ys[i])
-        pred_outliers.append(preds[i])
-      else:
-        y_outliers.append(None)
-        pred_outliers.append(None)
+        if ys[i] >= threshold:
+            y_outliers.append(ys[i])
+            pred_outliers.append(preds[i])
+        else:
+            y_outliers.append(None)
+            pred_outliers.append(None)
     
     # Calculate the outlier MSE; remove the NAs.
     temp_y_outliers = [i for i in y_outliers if i is not None]

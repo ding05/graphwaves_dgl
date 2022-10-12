@@ -58,25 +58,34 @@ for lead_time in [1]:
     
     # Load the input.
     
-    loc_name = "BoPwEastAus"
+    loc_name = "BoPwOceans"
     
-    x = load(data_path + "y.npy")
-    x1 = load(data_path + "y_eastaus.npy")
-    y = load(data_path + "y.npy")
+    x = load(data_path + "y.npy").squeeze(axis=1)
+    x1 = load(data_path + "y_eastaus.npy").squeeze(axis=1)
+    x2 = load(data_path + "y_equapacific.npy").squeeze(axis=1)
+    x3 = load(data_path + "y_nepacific.npy").squeeze(axis=1)
+    x4 = load(data_path + "y_nwpacific.npy").squeeze(axis=1)
+    x5 = load(data_path + "y_southpacific.npy").squeeze(axis=1)
+    x6 = load(data_path + "y_indian.npy").squeeze(axis=1)
+    x7 = load(data_path + "y_indian.npy").squeeze(axis=1)
+    x8 = load(data_path + "y_southatlantic.npy").squeeze(axis=1)
+    y = load(data_path + "y.npy").squeeze(axis=1)
     
+    """
     x = x.squeeze(axis=1)
     x1 = x1.squeeze(axis=1)
     y = y.squeeze(axis=1)
+    """
     y_all = y
     #num_var = 1
-    num_var = 2
+    num_var = 9
     
     dataset = []
     
     for i in range(len(y)-window_size-lead_time):
-      #dataset.append([torch.tensor(x[i:i+window_size]), torch.tensor(y[i+window_size+lead_time-1])])
-      dataset.append([torch.tensor(np.concatenate((x[i:i+window_size], x1[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
-    
+        #dataset.append([torch.tensor(x[i:i+window_size]), torch.tensor(y[i+window_size+lead_time-1])])
+        #dataset.append([torch.tensor(np.concatenate((x[i:i+window_size], x1[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
+        dataset.append([torch.tensor(np.concatenate((x[i:i+window_size], x1[i:i+window_size], x2[i:i+window_size], x3[i:i+window_size], x4[i:i+window_size], x5[i:i+window_size], x6[i:i+window_size], x7[i:i+window_size], x8[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
     print("--------------------")
     print()
     
@@ -93,27 +102,27 @@ for lead_time in [1]:
     
     class FCN(nn.Module):
         def __init__(self):
-          super(FCN, self).__init__()
-          self.fc_bn = nn.BatchNorm1d(window_size * num_var)    
-          self.fc1 = nn.Linear(window_size * num_var, num_hid_feat)      
-          self.fc2 = nn.Linear(num_hid_feat, 1)
-          #self.dropout = nn.Dropout(0.25)
-          self.double()
+            super(FCN, self).__init__()
+            self.fc_bn = nn.BatchNorm1d(window_size * num_var)    
+            self.fc1 = nn.Linear(window_size * num_var, num_hid_feat)      
+            self.fc2 = nn.Linear(num_hid_feat, 1)
+            #self.dropout = nn.Dropout(0.25)
+            self.double()
         
         def forward(self, x):
-          #print(x)
-          #print(x.shape)
-          x = self.fc_bn(x)
-          #print(x)
-          #print(x.shape)  
-          x = self.fc1(x)       
-          x = F.leaky_relu(x, negative_slope)
-          #x = torch.sigmoid(x)
-          #x = self.dropout(x)
-          x = self.fc2(x)        
-          x = F.leaky_relu(x, negative_slope)
-          #x = torch.sigmoid(x)
-          return x
+            #print(x)
+            #print(x.shape)
+            x = self.fc_bn(x)
+            #print(x)
+            #print(x.shape)  
+            x = self.fc1(x)       
+            x = F.leaky_relu(x, negative_slope)
+            #x = torch.sigmoid(x)
+            #x = self.dropout(x)
+            x = self.fc2(x)        
+            x = F.leaky_relu(x, negative_slope)
+            #x = torch.sigmoid(x)
+            return x
     
     model = FCN()
     optim = torch.optim.RMSprop(model.parameters(), lr=learning_rate, alpha=alpha, weight_decay=weight_decay, momentum=momentum)
@@ -221,10 +230,10 @@ for lead_time in [1]:
     all_epoch = np.array(list(range(1, num_train_epoch+1)))
     
     all_perform_dict = {
-      "training_time": str(stop-start),
-      "all_loss": all_loss.tolist(),
-      "all_eval": all_eval.tolist(),
-      "all_epoch": all_epoch.tolist()}
+        "training_time": str(stop-start),
+        "all_loss": all_loss.tolist(),
+        "all_eval": all_eval.tolist(),
+        "all_epoch": all_epoch.tolist()}
     
     with open(out_path + "perform_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as file:
         file.write(json.dumps(all_perform_dict))
@@ -244,12 +253,12 @@ for lead_time in [1]:
     y_outliers = []
     pred_outliers = []
     for i in range(len(ys)):
-      if ys[i] >= threshold:
-        y_outliers.append(ys[i])
-        pred_outliers.append(preds[i])
-      else:
-        y_outliers.append(None)
-        pred_outliers.append(None)
+        if ys[i] >= threshold:
+            y_outliers.append(ys[i])
+            pred_outliers.append(preds[i])
+        else:
+            y_outliers.append(None)
+            pred_outliers.append(None)
     
     # Calculate the outlier MSE; remove the NAs.
     temp_y_outliers = [i for i in y_outliers if i is not None]
