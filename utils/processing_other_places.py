@@ -122,8 +122,25 @@ save(data_path + "y_labrador.npy", soda_labrador_ssta)
 save(data_path + "y_equapacific.npy", soda_equapacific_ssta)
 save(data_path + "y_eastaus.npy", soda_eastaus_ssta)
 save(data_path + "y_chatham.npy", soda_chatham_ssta)
-"""
 save(data_path + "y_med.npy", soda_med_ssta)
+"""
+
+# More places
+# For convenience, define a function.
+
+def extract_y(lat, lon, filename, data_path=data_path):
+    soda_temp = soda.loc[dict(LAT=str(lat), LONN359_360=str(lon))]
+    soda_temp_sst = np.zeros((len(soda.TIME), 1))
+    soda_temp_sst[:,:] = soda_temp.variables["TEMP"][:,:]
+    soda_temp_ssta = get_ssta(soda_temp_sst)
+    save(data_path + "y_" + filename + ".npy", soda_temp_ssta)
+
+extract_y(26.75, 157.75, "nepacific")
+extract_y(40.75, -147.75, "nwpacific")
+extract_y(-40.75, -123.25, "southpacific")
+extract_y(-11.25, 77.25, "indian")
+extract_y(36.25, -43.75, "northatlantic")
+extract_y(-29.25, -16.25, "southatlantic")
 
 print("Save the output vectors in NPY files.")
 print("--------------------")
