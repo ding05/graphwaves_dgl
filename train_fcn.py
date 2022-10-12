@@ -35,8 +35,8 @@ for lead_time in [1]:
     train_split = 0.8
     lead_time = lead_time
     noise_var = 0.01
-    #loss_function = "BMSE" + str(noise_var) # "MSE", "MAE", "Huber", "WMSE", "WMAE", "WHuber", "WFMSE", "WFMAE", "BMSE
-    weight = 75
+    #loss_function = "BMSE" + str(noise_var) # "MSE", "MAE", "Huber", "WMSE", "WMAE", "WHuber", "WFMSE", "WFMAE", "BMSE"
+    weight = 50
     loss_function = "CmMAE" + str(weight)
     #loss_function = "MAE"
     negative_slope = 0.1
@@ -46,10 +46,11 @@ for lead_time in [1]:
     learning_rate = 0.002 # 0.05, 0.02, 0.01
     momentum = 0.9
     weight_decay = 0.01
+    batch_norm = "bn"
     dropout = "nd"
     batch_size = 512 # >= 120 crashed for original size, >= 550 crashed for half size, >= 480 crashed for half size and two variables
     num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
-    num_train_epoch = 400
+    num_train_epoch = 200
     
     data_path = "data/"
     models_path = "out/"
@@ -57,7 +58,7 @@ for lead_time in [1]:
     
     # Load the input.
     
-    loc_name = "BoP"
+    loc_name = "BoPwEastAus"
     
     x = load(data_path + "y.npy")
     x1 = load(data_path + "y_eastaus.npy")
@@ -67,14 +68,14 @@ for lead_time in [1]:
     x1 = x1.squeeze(axis=1)
     y = y.squeeze(axis=1)
     y_all = y
-    num_var = 1
-    #num_var = 2
+    #num_var = 1
+    num_var = 2
     
     dataset = []
     
     for i in range(len(y)-window_size-lead_time):
-      dataset.append([torch.tensor(x[i:i+window_size]), torch.tensor(y[i+window_size+lead_time-1])])
-      #dataset.append([torch.tensor(np.concatenate((x[i:i+window_size], x1[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
+      #dataset.append([torch.tensor(x[i:i+window_size]), torch.tensor(y[i+window_size+lead_time-1])])
+      dataset.append([torch.tensor(np.concatenate((x[i:i+window_size], x1[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
     
     print("--------------------")
     print()
@@ -93,17 +94,23 @@ for lead_time in [1]:
     class FCN(nn.Module):
         def __init__(self):
           super(FCN, self).__init__()
-          self.fc1 = nn.Linear(window_size * num_var, num_hid_feat)
+          self.fc_bn = nn.BatchNorm1d(window_size * num_var)    
+          self.fc1 = nn.Linear(window_size * num_var, num_hid_feat)      
           self.fc2 = nn.Linear(num_hid_feat, 1)
           #self.dropout = nn.Dropout(0.25)
           self.double()
         
         def forward(self, x):
-          x = self.fc1(x)
+          #print(x)
+          #print(x.shape)
+          x = self.fc_bn(x)
+          #print(x)
+          #print(x.shape)  
+          x = self.fc1(x)       
           x = F.leaky_relu(x, negative_slope)
           #x = torch.sigmoid(x)
           #x = self.dropout(x)
-          x = self.fc2(x)
+          x = self.fc2(x)        
           x = F.leaky_relu(x, negative_slope)
           #x = torch.sigmoid(x)
           return x
@@ -132,10 +139,10 @@ for lead_time in [1]:
         
         # Control the weight parameter in the customized MAE loss.
         if epoch < num_train_epoch * 0.95:
-            cur_weight = weight-((weight-5)/num_train_epoch)*epoch
+            cur_weight = weight-((weight-3)/num_train_epoch)*epoch
             #cur_weight = 1
         else:
-            cur_weight = 5
+            cur_weight = 3
         print("cur_weight:", cur_weight)
         
         for x, y in train_dataloader:
@@ -158,6 +165,7 @@ for lead_time in [1]:
         
         preds = []
         ys = []
+        model.eval() # Tell the model to evaluate it instead of training, to avoid the BatchNorm1d error.
         for x, y in test_dataloader:
             pred = torch.squeeze(model(x))
             preds.append(pred.cpu().detach().numpy())
@@ -182,7 +190,7 @@ for lead_time in [1]:
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optim.state_dict(),
                 "loss": loss
-                }, models_path + "checkpoint_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".tar")
+                }, models_path + "checkpoint_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".tar")
     
     print("Save the checkpoint in a TAR file.")
     print("----------")
@@ -218,7 +226,7 @@ for lead_time in [1]:
       "all_eval": all_eval.tolist(),
       "all_epoch": all_epoch.tolist()}
     
-    with open(out_path + "perform_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as file:
+    with open(out_path + "perform_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as file:
         file.write(json.dumps(all_perform_dict))
     
     print("Save the performance in a TXT file.")
@@ -264,7 +272,7 @@ for lead_time in [1]:
     plt.plot(month, np.array(preds, dtype=object), linestyle="-", color="skyblue")
     ax.plot(month, np.array(preds, dtype=object), "o", color="skyblue")
     ax.plot(month, np.array(pred_outliers, dtype=object), "o", color="blue")
-    plt.savefig(out_path + "pred_a_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
+    plt.savefig(out_path + "pred_a_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
     
     fig, ax = plt.subplots(figsize=(12, 8))
     lim = max(np.abs(np.array(preds)).max(), np.abs(np.array(ys)).max())
@@ -281,7 +289,7 @@ for lead_time in [1]:
     patch_a = mpatches.Patch(color="pink", label="Obs above 90th")
     ax.legend(handles=[patch_a])
     ax.axvspan(threshold, max(ys)+0.1, color="pink")
-    plt.savefig(out_path + "pred_b_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
+    plt.savefig(out_path + "pred_b_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
         
     print("Save the observed vs. predicted plots.")
     print("----------")
@@ -296,7 +304,7 @@ for lead_time in [1]:
     plt.xlabel("Epoch")
     plt.ylabel("Value")
     plt.title("Performance")
-    plt.savefig(out_path + "perform_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
+    plt.savefig(out_path + "perform_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
     
     print("Save the loss vs. evaluation metric plot.")
     print("--------------------")
@@ -326,7 +334,7 @@ for lead_time in [1]:
       "Precision": str(round(tp/(tp+fp),4)),
       "Recall": str(round(tp/(tp+fn),4))
       }
-    with open(out_path + "classification_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as file:
+    with open(out_path + "classification_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as file:
         file.write(json.dumps(class_dict))
     """
     
@@ -337,7 +345,7 @@ for lead_time in [1]:
     
     classification_results = classification_report(ys_masked, preds_masked, digits=4)
 
-    with open(out_path + "classification_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as f:
+    with open(out_path + "classification_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as f:
         print(classification_results, file=f)
     
     print("Save the classification results in a TXT file.")
