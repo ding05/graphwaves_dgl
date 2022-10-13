@@ -25,7 +25,7 @@ import matplotlib.transforms as mtransforms
 
 # FCN configurations
 
-for lead_time in [1]:
+for lead_time in [1, 2, 3, 6]:
 
     net_class = "FCN" #
     num_layer = 2 #
@@ -78,6 +78,7 @@ for lead_time in [1]:
     """
     y_all = y
     #num_var = 1
+    #num_var = 2
     num_var = 9
     
     dataset = []
