@@ -16,7 +16,7 @@ loc_name = "Chatham"
 
 y = load(data_path + "y_chatham.npy")
 
-for lead_time in [1]:
+for lead_time in [1, 2, 3, 6]:
 
     # Create a persistence model.
     
@@ -39,8 +39,8 @@ for lead_time in [1]:
     plt.rcParams.update({"font.size": 20})
     
     # Calculate the threshold for 90th percentile and mark the outliers.
-    y = y.squeeze(axis=1)
-    y_train = y[:int(len(y)*0.8)]
+    y_temp = y.squeeze(axis=1)
+    y_train = y_temp[:int(len(y)*0.8)]
     y_train_sorted = np.sort(y_train)
     threshold = y_train_sorted[int(len(y_train_sorted)*0.9):][0]
     threshold_weak = y_train_sorted[int(len(y_train_sorted)*0.8):][0]
