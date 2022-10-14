@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="GraphWaves",
-    version="0.2.6.2",
+    version="0.2.6.3",
     packages=find_packages(),
     url="https://github.com/ding05/GraphWaves",
     license="MIT",

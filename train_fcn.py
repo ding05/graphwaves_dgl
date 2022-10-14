@@ -27,221 +27,234 @@ import matplotlib.transforms as mtransforms
 
 for lead_time in [1, 2, 3, 6]:
 
-    net_class = "FCN" #
-    num_layer = 2 #
-    num_hid_feat = 50 #
-    num_out_feat = 1 #
-    window_size = 5
-    train_split = 0.8
-    lead_time = lead_time
-    noise_var = 0.01
-    #loss_function = "BMSE" + str(noise_var) # "MSE", "MAE", "Huber", "WMSE", "WMAE", "WHuber", "WFMSE", "WFMAE", "BMSE"
-    weight = 50
-    loss_function = "CmMAE" + str(weight)
-    #loss_function = "MAE"
-    negative_slope = 0.1
-    activation = "lrelu" + str(negative_slope) # "relu", "tanh", "sigm"
-    alpha = 0.9
-    optimizer = "RMSP" + str(alpha) # SGD, Adam
-    learning_rate = 0.002 # 0.05, 0.02, 0.01
-    momentum = 0.9
-    weight_decay = 0.01
-    batch_norm = "bn"
-    dropout = "nd"
-    batch_size = 512 # >= 120 crashed for original size, >= 550 crashed for half size, >= 480 crashed for half size and two variables
-    num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
-    num_train_epoch = 200
+    # Train 10 models for the same configuration and average the predictions, to minimize the effect of randomness.
+    all_preds = []
     
-    data_path = "data/"
-    models_path = "out/"
-    out_path = "out/"
+    for model_num in range(10):
     
-    # Load the input.
-    
-    loc_name = "BoPwOceans"
-    
-    x = load(data_path + "y.npy").squeeze(axis=1)
-    x1 = load(data_path + "y_eastaus.npy").squeeze(axis=1)
-    x2 = load(data_path + "y_equapacific.npy").squeeze(axis=1)
-    x3 = load(data_path + "y_nepacific.npy").squeeze(axis=1)
-    x4 = load(data_path + "y_nwpacific.npy").squeeze(axis=1)
-    x5 = load(data_path + "y_southpacific.npy").squeeze(axis=1)
-    x6 = load(data_path + "y_indian.npy").squeeze(axis=1)
-    x7 = load(data_path + "y_indian.npy").squeeze(axis=1)
-    x8 = load(data_path + "y_southatlantic.npy").squeeze(axis=1)
-    y = load(data_path + "y.npy").squeeze(axis=1)
-    
-    """
-    x = x.squeeze(axis=1)
-    x1 = x1.squeeze(axis=1)
-    y = y.squeeze(axis=1)
-    """
-    y_all = y
-    #num_var = 1
-    #num_var = 2
-    num_var = 9
-    
-    dataset = []
-    
-    for i in range(len(y)-window_size-lead_time):
-        #dataset.append([torch.tensor(x[i:i+window_size]), torch.tensor(y[i+window_size+lead_time-1])])
-        #dataset.append([torch.tensor(np.concatenate((x[i:i+window_size], x1[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
-        dataset.append([torch.tensor(np.concatenate((x[i:i+window_size], x1[i:i+window_size], x2[i:i+window_size], x3[i:i+window_size], x4[i:i+window_size], x5[i:i+window_size], x6[i:i+window_size], x7[i:i+window_size], x8[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
-    print("--------------------")
-    print()
-    
-    num_examples = len(dataset)
-    num_train = int(num_examples * train_split)
-    
-    train_sampler = SequentialSampler(torch.arange(num_train))
-    test_sampler = SequentialSampler(torch.arange(num_train, num_examples))
-    
-    train_dataloader = DataLoader(dataset, sampler=torch.arange(num_train), batch_size=batch_size, drop_last=False)
-    test_dataloader = DataLoader(dataset, sampler=torch.arange(num_train, num_examples), batch_size=1, drop_last=False)
-    
-    # Set up a FCN.
-    
-    class FCN(nn.Module):
-        def __init__(self):
-            super(FCN, self).__init__()
-            self.fc_bn = nn.BatchNorm1d(window_size * num_var)    
-            self.fc1 = nn.Linear(window_size * num_var, num_hid_feat)      
-            self.fc2 = nn.Linear(num_hid_feat, 1)
-            #self.dropout = nn.Dropout(0.25)
-            self.double()
+        net_class = "FCN" #
+        num_layer = 2 #
+        num_hid_feat = 50 #
+        num_out_feat = 1 #
+        window_size = 5
+        train_split = 0.8
+        lead_time = lead_time
+        noise_var = 0.01
+        #loss_function = "BMSE" + str(noise_var) # "MSE", "MAE", "Huber", "WMSE", "WMAE", "WHuber", "WFMSE", "WFMAE", "BMSE"
+        weight = 50
+        loss_function = "CmMAE" + str(weight)
+        #loss_function = "MAE"
+        negative_slope = 0.1
+        activation = "lrelu" + str(negative_slope) # "relu", "tanh", "sigm"
+        alpha = 0.9
+        optimizer = "RMSP" + str(alpha) # SGD, Adam
+        learning_rate = 0.002 # 0.05, 0.02, 0.01
+        momentum = 0.9
+        weight_decay = 0.01
+        batch_norm = "bn"
+        dropout = "nd"
+        batch_size = 512 # >= 120 crashed for original size, >= 550 crashed for half size, >= 480 crashed for half size and two variables
+        num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
+        num_train_epoch = 200
         
-        def forward(self, x):
-            #print(x)
-            #print(x.shape)
-            x = self.fc_bn(x)
-            #print(x)
-            #print(x.shape)  
-            x = self.fc1(x)       
-            x = F.leaky_relu(x, negative_slope)
-            #x = torch.sigmoid(x)
-            #x = self.dropout(x)
-            x = self.fc2(x)        
-            x = F.leaky_relu(x, negative_slope)
-            #x = torch.sigmoid(x)
-            return x
-    
-    model = FCN()
-    optim = torch.optim.RMSprop(model.parameters(), lr=learning_rate, alpha=alpha, weight_decay=weight_decay, momentum=momentum)
-    
-    # Train the model.
-    
-    # Start time
-    start = time.time()
-    
-    all_loss = []
-    all_eval = []
-    
-    for epoch in range(num_train_epoch):
-        print("Epoch " + str(epoch))
+        data_path = "data/"
+        models_path = "out/"
+        out_path = "out/"
+        
+        # Load the input.
+        
+        loc_name = "BoPwEastAus"
+        
+        x = load(data_path + "y.npy").squeeze(axis=1)
+        x1 = load(data_path + "y_eastaus.npy").squeeze(axis=1)
+        x2 = load(data_path + "y_equapacific.npy").squeeze(axis=1)
+        x3 = load(data_path + "y_nepacific.npy").squeeze(axis=1)
+        x4 = load(data_path + "y_nwpacific.npy").squeeze(axis=1)
+        x5 = load(data_path + "y_southpacific.npy").squeeze(axis=1)
+        x6 = load(data_path + "y_indian.npy").squeeze(axis=1)
+        x7 = load(data_path + "y_indian.npy").squeeze(axis=1)
+        x8 = load(data_path + "y_southatlantic.npy").squeeze(axis=1)
+        y = load(data_path + "y.npy").squeeze(axis=1)
+        
+        """
+        x = x.squeeze(axis=1)
+        x1 = x1.squeeze(axis=1)
+        y = y.squeeze(axis=1)
+        """
+        y_all = y
+        #num_var = 1
+        num_var = 2
+        #num_var = 9
+        
+        dataset = []
+        
+        for i in range(len(y)-window_size-lead_time):
+            #dataset.append([torch.tensor(x[i:i+window_size]), torch.tensor(y[i+window_size+lead_time-1])])
+            dataset.append([torch.tensor(np.concatenate((x[i:i+window_size], x1[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
+            #dataset.append([torch.tensor(np.concatenate((x[i:i+window_size], x1[i:i+window_size], x2[i:i+window_size], x3[i:i+window_size], x4[i:i+window_size], x5[i:i+window_size], x6[i:i+window_size], x7[i:i+window_size], x8[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
+        print("--------------------")
         print()
         
-        losses = []
+        num_examples = len(dataset)
+        num_train = int(num_examples * train_split)
         
-        # The threshold for defining outliers using the 90th percentile
-        y_train = y_all[:int(len(y_all)*0.8)]
-        y_train_sorted = np.sort(y_train)
-        threshold = y_train_sorted[int(len(y_train_sorted)*0.9):][0]
+        train_sampler = SequentialSampler(torch.arange(num_train))
+        test_sampler = SequentialSampler(torch.arange(num_train, num_examples))
         
-        # Control the weight parameter in the customized MAE loss.
-        if epoch < num_train_epoch * 0.95:
-            cur_weight = weight-((weight-3)/num_train_epoch)*epoch
-            #cur_weight = 1
-        else:
-            cur_weight = 3
-        print("cur_weight:", cur_weight)
+        train_dataloader = DataLoader(dataset, sampler=torch.arange(num_train), batch_size=batch_size, drop_last=False)
+        test_dataloader = DataLoader(dataset, sampler=torch.arange(num_train, num_examples), batch_size=1, drop_last=False)
         
-        for x, y in train_dataloader:
-            pred = torch.squeeze(model(x))
-            #loss_func = nn.MSELoss()
-            #loss_func = nn.L1Loss()
-            #print("pred:", pred)
-            #print("y:", y)
-            #loss = loss_func(pred, y)
-            loss = cm_weighted_mae(pred, y, threshold=threshold, weight=cur_weight)
-            #loss = balanced_mse(pred, y, noise_var)
-            optim.zero_grad()
-            loss.backward()
-            optim.step()
-            losses.append(loss.cpu().detach().numpy())
+        # Set up a FCN.
+        
+        class FCN(nn.Module):
+            def __init__(self):
+                super(FCN, self).__init__()
+                self.fc_bn = nn.BatchNorm1d(window_size * num_var)    
+                self.fc1 = nn.Linear(window_size * num_var, num_hid_feat)      
+                self.fc2 = nn.Linear(num_hid_feat, 1)
+                #self.dropout = nn.Dropout(0.25)
+                self.double()
+            
+            def forward(self, x):
+                #print(x)
+                #print(x.shape)
+                x = self.fc_bn(x)
+                #print(x)
+                #print(x.shape)  
+                x = self.fc1(x)       
+                x = F.leaky_relu(x, negative_slope)
+                #x = torch.sigmoid(x)
+                #x = self.dropout(x)
+                x = self.fc2(x)        
+                x = F.leaky_relu(x, negative_slope)
+                #x = torch.sigmoid(x)
+                return x
+        
+        model = FCN()
+        optim = torch.optim.RMSprop(model.parameters(), lr=learning_rate, alpha=alpha, weight_decay=weight_decay, momentum=momentum)
+        
+        # Train the model.
+        
+        # Start time
+        start = time.time()
+        
+        all_loss = []
+        all_eval = []
+        
+        for epoch in range(num_train_epoch):
+            print("Epoch " + str(epoch))
+            print()
+            
+            losses = []
+            
+            # The threshold for defining outliers using the 90th percentile
+            y_train = y_all[:int(len(y_all)*0.8)]
+            y_train_sorted = np.sort(y_train)
+            threshold = y_train_sorted[int(len(y_train_sorted)*0.9):][0]
+            
+            # Control the weight parameter in the customized MAE loss.
+            if epoch < num_train_epoch * 0.95:
+                cur_weight = weight-((weight-3)/num_train_epoch)*epoch
+                #cur_weight = 1
+            else:
+                cur_weight = 3
+            print("cur_weight:", cur_weight)
+            
+            for x, y in train_dataloader:
+                pred = torch.squeeze(model(x))
+                #loss_func = nn.MSELoss()
+                #loss_func = nn.L1Loss()
+                #print("pred:", pred)
+                #print("y:", y)
+                #loss = loss_func(pred, y)
+                loss = cm_weighted_mae(pred, y, threshold=threshold, weight=cur_weight)
+                #loss = balanced_mse(pred, y, noise_var)
+                optim.zero_grad()
+                loss.backward()
+                optim.step()
+                losses.append(loss.cpu().detach().numpy())
+            print()
+            print("Training loss:", sum(losses) / len(losses))
+            print()
+            all_loss.append(sum(losses) / len(losses))
+            
+            preds = []
+            ys = []
+            model.eval() # Tell the model to evaluate it instead of training, to avoid the BatchNorm1d error.
+            for x, y in test_dataloader:
+                pred = torch.squeeze(model(x))
+                preds.append(pred.cpu().detach().numpy())
+                ys.append(y.cpu().detach().numpy())
+            val_mse = mean_squared_error(np.array(ys), np.array(preds), squared=True)
+            print("Test MSE:", val_mse)
+            print()
+            all_eval.append(val_mse)
+        
+            print("----------")
+            print()
+        
+        # End time
+        stop = time.time()
+        
+        print(f"Complete training. Time spent: {stop - start} seconds.")
+        print("----------")
         print()
-        print("Training loss:", sum(losses) / len(losses))
+        
+        torch.save({
+                    "epoch": num_train_epoch,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optim.state_dict(),
+                    "loss": loss
+                    }, models_path + "checkpoint_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + "_" + str(model_num) + ".tar")
+        
+        print("Save the checkpoint in a TAR file.")
+        print("----------")
         print()
-        all_loss.append(sum(losses) / len(losses))
+        
+        # Test the model.
         
         preds = []
         ys = []
-        model.eval() # Tell the model to evaluate it instead of training, to avoid the BatchNorm1d error.
         for x, y in test_dataloader:
             pred = torch.squeeze(model(x))
             preds.append(pred.cpu().detach().numpy())
             ys.append(y.cpu().detach().numpy())
-        val_mse = mean_squared_error(np.array(ys), np.array(preds), squared=True)
-        print("Test MSE:", val_mse)
+        test_mse = mean_squared_error(np.array(ys), np.array(preds), squared=True)
+        test_rmse = mean_squared_error(np.array(ys), np.array(preds), squared=False)
+        
+        # Add to the predictions of all models.
+        all_preds.append(preds)
+            
+        print("----------")
         print()
-        all_eval.append(val_mse)
-    
+        
+        print("Final test MSE:", test_mse)
+        print("----------")
+        print()
+        
+        # Show the results.
+        
+        all_loss = np.array(all_loss)
+        all_eval = np.array(all_eval)
+        all_epoch = np.array(list(range(1, num_train_epoch+1)))
+        
+        all_perform_dict = {
+            "training_time": str(stop-start),
+            "all_loss": all_loss.tolist(),
+            "all_eval": all_eval.tolist(),
+            "all_epoch": all_epoch.tolist()}
+        
+        with open(out_path + "perform_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) +  "_" + str(model_num) + ".txt", "w") as file:
+            file.write(json.dumps(all_perform_dict))
+        
+        print("Save the performance in a TXT file.")
         print("----------")
         print()
     
-    # End time
-    stop = time.time()
-    
-    print(f"Complete training. Time spent: {stop - start} seconds.")
-    print("----------")
-    print()
-    
-    torch.save({
-                "epoch": num_train_epoch,
-                "model_state_dict": model.state_dict(),
-                "optimizer_state_dict": optim.state_dict(),
-                "loss": loss
-                }, models_path + "checkpoint_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".tar")
-    
-    print("Save the checkpoint in a TAR file.")
-    print("----------")
-    print()
-    
-    # Test the model.
-    
-    preds = []
-    ys = []
-    for x, y in test_dataloader:
-        pred = torch.squeeze(model(x))
-        preds.append(pred.cpu().detach().numpy())
-        ys.append(y.cpu().detach().numpy())
-    test_mse = mean_squared_error(np.array(ys), np.array(preds), squared=True)
-    test_rmse = mean_squared_error(np.array(ys), np.array(preds), squared=False)
-        
-    print("----------")
-    print()
-    
-    print("Final test MSE:", test_mse)
-    print("----------")
-    print()
-    
-    # Show the results.
-    
-    all_loss = np.array(all_loss)
-    all_eval = np.array(all_eval)
-    all_epoch = np.array(list(range(1, num_train_epoch+1)))
-    
-    all_perform_dict = {
-        "training_time": str(stop-start),
-        "all_loss": all_loss.tolist(),
-        "all_eval": all_eval.tolist(),
-        "all_epoch": all_epoch.tolist()}
-    
-    with open(out_path + "perform_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as file:
-        file.write(json.dumps(all_perform_dict))
-    
-    print("Save the performance in a TXT file.")
-    print("----------")
-    print()
+    # Average the predictions by all models.
+    sum_preds = np.add.reduce(all_preds)
+    avg_preds = sum_preds / (model_num + 1)
+    preds = avg_preds.tolist()
     
     # Increase the fontsize.
     plt.rcParams.update({"font.size": 20})
