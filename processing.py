@@ -1,4 +1,4 @@
-from utils.natozero import *
+from utils.processing_utils import *
 
 import numpy as np
 from numpy import asarray, save
@@ -40,7 +40,7 @@ print("----------")
 print()
 
 # Drop the land nodes (the rows in the node feature matrix with NAs).
-soda_smaller_ocean_flattened = natozero(soda_smaller_flattened)
+soda_smaller_ocean_flattened = drop_rows_w_nas(soda_smaller_flattened)
 
 print("Shape of node feature matrix after land nodes were removed:")
 print(soda_smaller_ocean_flattened.shape)
@@ -110,14 +110,6 @@ def avg(list):
   return sum(list) / len(list)
 
 # Get SSTAs from an SST vector.
-def get_ssta(time_series):
-  monthly_avg = []
-  for month in range(12):
-    monthly_sst = time_series[month:train_num_year*12:12]
-    monthly_avg.append(avg(monthly_sst))
-    time_series[month::12] -= monthly_avg[month]
-  return time_series
-
 soda_ssta = []
 for row in soda_smaller_ocean_flattened:
   soda_ssta.append(get_ssta(row))
