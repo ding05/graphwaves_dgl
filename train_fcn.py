@@ -31,10 +31,11 @@ for lead_time in [1, 2, 3, 6]:
     all_preds = []
     
     for model_num in range(10):
+    #for model_num in range(1):
     
         net_class = "FCN" #
         num_layer = 2 #
-        num_hid_feat = 500 #50
+        num_hid_feat = 50 # 500 for grids
         num_out_feat = 1 #
         window_size = 5
         train_split = 0.8
@@ -48,8 +49,9 @@ for lead_time in [1, 2, 3, 6]:
         activation = "lrelu" + str(negative_slope) # "relu", "tanh", "sigm"
         alpha = 0.9
         optimizer = "RMSP" + str(alpha) # SGD, Adam
-        learning_rate = 0.002 # 0.05, 0.02, 0.01
-        momentum = 0.9
+        learning_rate = 0.002 # 0.000001 for grids
+        #momentum = 0.9
+        momentum = 0
         weight_decay = 0.01
         batch_norm = "bn"
         dropout = "nd"
@@ -63,7 +65,8 @@ for lead_time in [1, 2, 3, 6]:
         
         # Load the input.
         
-        loc_name = "BoPwSODAMini"
+        loc_name = "BoPwOceans"
+        #loc_name = "BoPwSODAMini"
         
         x = load(data_path + "y.npy").squeeze(axis=1)
         x1 = load(data_path + "y_eastaus.npy").squeeze(axis=1)
@@ -89,16 +92,16 @@ for lead_time in [1, 2, 3, 6]:
         y_all = y
         #num_var = 1
         #num_var = 2
-        #num_var = 9
-        num_var = grids.shape[1] * grids.shape[2]
+        num_var = 9
+        #num_var = grids.shape[1] * grids.shape[2]
         
         dataset = []
         
         for i in range(len(y)-window_size-lead_time):
             #dataset.append([torch.tensor(x[i:i+window_size]), torch.tensor(y[i+window_size+lead_time-1])])
             #dataset.append([torch.tensor(np.concatenate((x[i:i+window_size], x1[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
-            #dataset.append([torch.tensor(np.concatenate((x[i:i+window_size], x1[i:i+window_size], x2[i:i+window_size], x3[i:i+window_size], x4[i:i+window_size], x5[i:i+window_size], x6[i:i+window_size], x7[i:i+window_size], x8[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
-            dataset.append([torch.tensor(np.concatenate((flattened_grids[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
+            dataset.append([torch.tensor(np.concatenate((x[i:i+window_size], x1[i:i+window_size], x2[i:i+window_size], x3[i:i+window_size], x4[i:i+window_size], x5[i:i+window_size], x6[i:i+window_size], x7[i:i+window_size], x8[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
+            #dataset.append([torch.tensor(np.concatenate((flattened_grids[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
             
         print("--------------------")
         print()
@@ -161,7 +164,8 @@ for lead_time in [1, 2, 3, 6]:
             threshold = y_train_sorted[int(len(y_train_sorted)*0.9):][0]
             
             # Control the weight parameter in the customized MAE loss.
-            if epoch < num_train_epoch * 0.95:
+            #if epoch < num_train_epoch * 0.95:
+            if epoch < num_train_epoch * 0.9:
                 cur_weight = weight-((weight-3)/num_train_epoch)*epoch
                 #cur_weight = 1
             else:
@@ -172,8 +176,6 @@ for lead_time in [1, 2, 3, 6]:
                 pred = torch.squeeze(model(x))
                 #loss_func = nn.MSELoss()
                 #loss_func = nn.L1Loss()
-                #print("pred:", pred)
-                #print("y:", y)
                 #loss = loss_func(pred, y)
                 loss = cm_weighted_mae(pred, y, threshold=threshold, weight=cur_weight)
                 #loss = balanced_mse(pred, y, noise_var)
