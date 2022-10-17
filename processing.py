@@ -1,3 +1,5 @@
+from utils.natozero import *
+
 import numpy as np
 from numpy import asarray, save
 import math
@@ -38,14 +40,7 @@ print("----------")
 print()
 
 # Drop the land nodes (the rows in the node feature matrix with NAs).
-def dropna(arr, *args, **kwarg):
-    assert isinstance(arr, np.ndarray)
-    dropped=pd.DataFrame(arr).dropna(*args, **kwarg).values
-    if arr.ndim==1:
-        dropped=dropped.flatten()
-    return dropped
-
-soda_smaller_ocean_flattened = dropna(soda_smaller_flattened)
+soda_smaller_ocean_flattened = natozero(soda_smaller_flattened)
 
 print("Shape of node feature matrix after land nodes were removed:")
 print(soda_smaller_ocean_flattened.shape)
