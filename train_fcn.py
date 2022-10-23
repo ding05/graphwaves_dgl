@@ -44,7 +44,7 @@ for lead_time in [1]:
         lead_time = lead_time
         noise_var = 0.01
         #loss_function = "BMSE" + str(noise_var) # "MSE", "MAE", "Huber", "WMSE", "WMAE", "WHuber", "WFMSE", "WFMAE", "BMSE"
-        weight = 3
+        weight = 50
         loss_function = "CmMAE" + str(weight)
         #loss_function = "MAE"
         #loss_function = "WMAE" + str(weight)
