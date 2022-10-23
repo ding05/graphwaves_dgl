@@ -25,7 +25,9 @@ import matplotlib.transforms as mtransforms
 
 # FCN configurations
 
-for lead_time in [1, 2, 3, 6]:
+for lead_time in [1]:
+#lead_time = 1
+#for weight in [2, 3, 5, 10, 20, 50, 100]:
 
     # Train 10 models for the same configuration and average the predictions, to minimize the effect of randomness.
     all_preds = []
@@ -42,16 +44,17 @@ for lead_time in [1, 2, 3, 6]:
         lead_time = lead_time
         noise_var = 0.01
         #loss_function = "BMSE" + str(noise_var) # "MSE", "MAE", "Huber", "WMSE", "WMAE", "WHuber", "WFMSE", "WFMAE", "BMSE"
-        weight = 50
+        weight = 3
         loss_function = "CmMAE" + str(weight)
         #loss_function = "MAE"
+        #loss_function = "WMAE" + str(weight)
         negative_slope = 0.1
         activation = "lrelu" + str(negative_slope) # "relu", "tanh", "sigm"
         alpha = 0.9
         optimizer = "RMSP" + str(alpha) # SGD, Adam
         learning_rate = 0.002 # 0.000001 for grids
-        #momentum = 0.9
-        momentum = 0
+        momentum = 0.9
+        #momentum = 0
         weight_decay = 0.01
         batch_norm = "bn"
         dropout = "nd"
@@ -65,7 +68,7 @@ for lead_time in [1, 2, 3, 6]:
         
         # Load the input.
         
-        loc_name = "BoPwOceans"
+        loc_name = "BoP"
         #loc_name = "BoPwSODAMini"
         
         x = load(data_path + "y.npy").squeeze(axis=1)
@@ -75,7 +78,7 @@ for lead_time in [1, 2, 3, 6]:
         x4 = load(data_path + "y_nwpacific.npy").squeeze(axis=1)
         x5 = load(data_path + "y_southpacific.npy").squeeze(axis=1)
         x6 = load(data_path + "y_indian.npy").squeeze(axis=1)
-        x7 = load(data_path + "y_indian.npy").squeeze(axis=1)
+        x7 = load(data_path + "y_northatlantic.npy").squeeze(axis=1)
         x8 = load(data_path + "y_southatlantic.npy").squeeze(axis=1)
         
         grids = load(data_path + "grids_mini.npy")
@@ -90,17 +93,17 @@ for lead_time in [1, 2, 3, 6]:
         y = y.squeeze(axis=1)
         """
         y_all = y
-        #num_var = 1
+        num_var = 1
         #num_var = 2
-        num_var = 9
+        #num_var = 9
         #num_var = grids.shape[1] * grids.shape[2]
         
         dataset = []
         
         for i in range(len(y)-window_size-lead_time):
-            #dataset.append([torch.tensor(x[i:i+window_size]), torch.tensor(y[i+window_size+lead_time-1])])
+            dataset.append([torch.tensor(x[i:i+window_size]), torch.tensor(y[i+window_size+lead_time-1])])
             #dataset.append([torch.tensor(np.concatenate((x[i:i+window_size], x1[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
-            dataset.append([torch.tensor(np.concatenate((x[i:i+window_size], x1[i:i+window_size], x2[i:i+window_size], x3[i:i+window_size], x4[i:i+window_size], x5[i:i+window_size], x6[i:i+window_size], x7[i:i+window_size], x8[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
+            #dataset.append([torch.tensor(np.concatenate((x[i:i+window_size], x1[i:i+window_size], x2[i:i+window_size], x3[i:i+window_size], x4[i:i+window_size], x5[i:i+window_size], x6[i:i+window_size], x7[i:i+window_size], x8[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
             #dataset.append([torch.tensor(np.concatenate((flattened_grids[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
             
         print("--------------------")
@@ -178,6 +181,7 @@ for lead_time in [1, 2, 3, 6]:
                 #loss_func = nn.L1Loss()
                 #loss = loss_func(pred, y)
                 loss = cm_weighted_mae(pred, y, threshold=threshold, weight=cur_weight)
+                #loss = cm_weighted_mae(pred, y, threshold=threshold, weight=weight)
                 #loss = balanced_mse(pred, y, noise_var)
                 optim.zero_grad()
                 loss.backward()
