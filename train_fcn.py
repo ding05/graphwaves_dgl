@@ -25,7 +25,7 @@ import matplotlib.transforms as mtransforms
 
 # FCN configurations
 
-for lead_time in [1]:
+for lead_time in [1, 2, 3, 6]:
 #lead_time = 1
 #for weight in [2, 3, 5, 10, 20, 50, 100]:
 
