@@ -183,6 +183,17 @@ for lead_time in [1, 2, 3, 6]:
                 loss = cm_weighted_mae(pred, y, threshold=threshold, weight=cur_weight)
                 #loss = cm_weighted_mae(pred, y, threshold=threshold, weight=weight)
                 #loss = balanced_mse(pred, y, noise_var)
+                
+                """
+                # L1 regularization
+                l1_crit = nn.L1Loss(size_average=False)
+                reg_loss = 0
+                for param in model.parameters():
+                    reg_loss += l1_crit(param, target=torch.zeros_like(param))
+                factor = 0.0001
+                loss += factor * reg_loss
+                """
+                
                 optim.zero_grad()
                 loss.backward()
                 optim.step()
@@ -348,32 +359,6 @@ for lead_time in [1, 2, 3, 6]:
     print()
 
     # Confusion matrix
-    
-    """
-    ys_masked = [1 if i >= threshold else 0 for i in ys]
-    preds_masked = [1 if i >= threshold else 0 for i in preds]
-    tn, fp, fn, tp = confusion_matrix(ys_masked, preds_masked).ravel()
-    
-    class_dict = {
-      "Introduction": "Positive: data points >= the 90th percentile (anomalies, associated with marine heatwaves), Negative: others (norms)",
-      "Number of data points": str(len(ys)),
-      "True positive": str(tp),
-      "True negative": str(tn),
-      "True classifications": str(tp+tn),
-      "False positive": str(fp),
-      "False negative": str(fn),
-      "False classifications": str(fp+fn),
-      "True positive rate": str(round(tp/len(ys),4)),
-      "True negative rate": str(round(tn/len(ys),4)),
-      "False positive rate": str(round(fp/len(ys),4)),
-      "False negative rate": str(round(fn/len(ys),4)),      
-      "Accuracy": str(round((tp+tn)/len(ys),4)),
-      "Precision": str(round(tp/(tp+fp),4)),
-      "Recall": str(round(tp/(tp+fn),4))
-      }
-    with open(out_path + "classification_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_layer) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as file:
-        file.write(json.dumps(class_dict))
-    """
     
     ys_masked = ["MHW Weak Indicator (>80th)" if ys[i] >= threshold_weak else "None" for i in range(len(ys))]
     ys_masked = ["MHW Strong Indicator (>90th)" if ys[i] >= threshold else ys_masked[i] for i in range(len(ys_masked))]
