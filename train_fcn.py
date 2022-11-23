@@ -44,7 +44,7 @@ for lead_time in [1, 2, 3, 6]:
         lead_time = lead_time
         noise_var = 0.01
         #loss_function = "BMSE" + str(noise_var) # "MSE", "MAE", "Huber", "WMSE", "WMAE", "WHuber", "WFMSE", "WFMAE", "BMSE"
-        weight = 50
+        weight = 3
         loss_function = "CmMAE" + str(weight)
         #loss_function = "MAE"
         #loss_function = "WMAE" + str(weight)
@@ -57,7 +57,8 @@ for lead_time in [1, 2, 3, 6]:
         #momentum = 0
         weight_decay = 0.01
         batch_norm = "bn"
-        dropout = "nd"
+        reg_factor = 0.0001
+        regularization = "L1" + str(reg_factor) + "_nd"
         batch_size = 512 # >= 120 crashed for original size, >= 550 crashed for half size, >= 480 crashed for half size and two variables
         num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
         num_train_epoch = 200
@@ -126,7 +127,7 @@ for lead_time in [1, 2, 3, 6]:
                 self.fc_bn = nn.BatchNorm1d(window_size * num_var)    
                 self.fc1 = nn.Linear(window_size * num_var, num_hid_feat)
                 self.fc2 = nn.Linear(num_hid_feat, 1)
-                #self.dropout = nn.Dropout(0.25)
+                #self.regularization = nn.regularization(0.25)
                 self.double()
             
             def forward(self, x):
@@ -138,7 +139,7 @@ for lead_time in [1, 2, 3, 6]:
                 x = self.fc1(x)       
                 x = F.leaky_relu(x, negative_slope)
                 #x = torch.sigmoid(x)
-                #x = self.dropout(x)
+                #x = self.regularization(x)
                 x = self.fc2(x)        
                 x = F.leaky_relu(x, negative_slope)
                 #x = torch.sigmoid(x)
@@ -173,26 +174,24 @@ for lead_time in [1, 2, 3, 6]:
                 #cur_weight = 1
             else:
                 cur_weight = 3
-            print("cur_weight:", cur_weight)
+            #print("cur_weight:", cur_weight)
             
             for x, y in train_dataloader:
                 pred = torch.squeeze(model(x))
                 #loss_func = nn.MSELoss()
                 #loss_func = nn.L1Loss()
                 #loss = loss_func(pred, y)
-                loss = cm_weighted_mae(pred, y, threshold=threshold, weight=cur_weight)
-                #loss = cm_weighted_mae(pred, y, threshold=threshold, weight=weight)
+                #loss = cm_weighted_mae(pred, y, threshold=threshold, weight=cur_weight)
+                loss = cm_weighted_mae(pred, y, threshold=threshold, weight=weight)
                 #loss = balanced_mse(pred, y, noise_var)
                 
-                """
                 # L1 regularization
-                l1_crit = nn.L1Loss(size_average=False)
+                l1_crit = nn.L1Loss(reduction="sum")
                 reg_loss = 0
                 for param in model.parameters():
                     reg_loss += l1_crit(param, target=torch.zeros_like(param))
                 factor = 0.0001
-                loss += factor * reg_loss
-                """
+                loss += reg_factor * reg_loss
                 
                 optim.zero_grad()
                 loss.backward()
@@ -230,7 +229,7 @@ for lead_time in [1, 2, 3, 6]:
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optim.state_dict(),
                     "loss": loss
-                    }, models_path + "checkpoint_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_layer) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + "_" + str(model_num) + ".tar")
+                    }, models_path + "checkpoint_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_layer) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(regularization) + "_" + str(batch_size) + "_" + str(num_train_epoch) + "_" + str(model_num) + ".tar")
         
         print("Save the checkpoint in a TAR file.")
         print("----------")
@@ -269,7 +268,7 @@ for lead_time in [1, 2, 3, 6]:
             "all_eval": all_eval.tolist(),
             "all_epoch": all_epoch.tolist()}
         
-        with open(out_path + "perform_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_layer) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) +  "_" + str(model_num) + ".txt", "w") as file:
+        with open(out_path + "perform_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_layer) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(regularization) + "_" + str(batch_size) + "_" + str(num_train_epoch) +  "_" + str(model_num) + ".txt", "w") as file:
             file.write(json.dumps(all_perform_dict))
         
         print("Save the performance in a TXT file.")
@@ -320,7 +319,7 @@ for lead_time in [1, 2, 3, 6]:
     plt.plot(month, np.array(preds, dtype=object), linestyle="-", color="skyblue")
     ax.plot(month, np.array(preds, dtype=object), "o", color="skyblue")
     ax.plot(month, np.array(pred_outliers, dtype=object), "o", color="blue")
-    plt.savefig(out_path + "pred_a_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_layer) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
+    plt.savefig(out_path + "pred_a_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_layer) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(regularization) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
     
     fig, ax = plt.subplots(figsize=(12, 8))
     lim = max(np.abs(np.array(preds)).max(), np.abs(np.array(ys)).max())
@@ -337,7 +336,7 @@ for lead_time in [1, 2, 3, 6]:
     patch_a = mpatches.Patch(color="pink", label="Obs above 90th")
     ax.legend(handles=[patch_a])
     ax.axvspan(threshold, max(ys)+0.1, color="pink")
-    plt.savefig(out_path + "pred_b_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_layer) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
+    plt.savefig(out_path + "pred_b_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_layer) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(regularization) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
         
     print("Save the observed vs. predicted plots.")
     print("----------")
@@ -352,13 +351,50 @@ for lead_time in [1, 2, 3, 6]:
     plt.xlabel("Epoch")
     plt.ylabel("Value")
     plt.title("Performance")
-    plt.savefig(out_path + "perform_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_layer) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
+    plt.savefig(out_path + "perform_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_layer) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(regularization) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".png")
     
     print("Save the loss vs. evaluation metric plot.")
     print("--------------------")
     print()
 
-    # Confusion matrix
+    # Regression results
+    
+    # "Recall-R"
+    recall_r = ol_test_mse
+    # "Precision-R"
+    y_outliers = []
+    pred_outliers = []
+    for i in range(len(preds)):
+        if preds[i] >= threshold:
+            y_outliers.append(ys[i])
+            pred_outliers.append(preds[i])
+        else:
+            y_outliers.append(None)
+            pred_outliers.append(None)
+    temp_y_outliers = [i for i in y_outliers if i is not None]
+    temp_pred_outliers = [i for i in pred_outliers if i is not None]
+    # If the lists are empty, the precision-R and F1-R are NAs.
+    if len(temp_pred_outliers) == 0:        
+        regress_dict = {
+          "MSE": str(round(test_mse, 4)),
+          "MSE for Predicted Anomalies (Precision-R)": "NA",
+          "MSE for Observed Anomalies (Recall-R)": str(round(recall_r, 4)),
+          "F1-R": "NA"
+          }
+    else:
+        precision_r = mean_squared_error(np.array(temp_y_outliers), np.array(temp_pred_outliers), squared=True)    
+        # "F1-R"
+        f1_r = 2 / (recall_r ** (-1) + precision_r ** (-1))
+        regress_dict = {
+          "MSE": str(round(test_mse, 4)),
+          "MSE for Predicted Anomalies (Precision-R)": str(round(precision_r, 4)),
+          "MSE for Observed Anomalies (Recall-R)": str(round(recall_r, 4)),
+          "F1-R": str(round(f1_r, 4))
+          }
+    with open(out_path + "regression_SSTASODA"  + loc_name + "_" + str(net_class) + "_" + str(num_layer) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(regularization) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as f:
+        f.write(json.dumps(regress_dict))
+
+    # Classification results
     
     ys_masked = ["MHW Weak Indicator (>80th)" if ys[i] >= threshold_weak else "None" for i in range(len(ys))]
     ys_masked = ["MHW Strong Indicator (>90th)" if ys[i] >= threshold else ys_masked[i] for i in range(len(ys_masked))]
@@ -367,7 +403,7 @@ for lead_time in [1, 2, 3, 6]:
     
     classification_results = classification_report(ys_masked, preds_masked, digits=4)
 
-    with open(out_path + "classification_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_layer) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(dropout) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as f:
+    with open(out_path + "classification_SSTASODA" + loc_name + "_" + str(net_class) + "_" + str(num_layer) + "_" + str(num_hid_feat) + "_" + str(num_out_feat) + "_" + str(window_size) + "_" + str(lead_time) + "_" + str(num_sample) + "_" + str(train_split) + "_" + str(loss_function) + "_" + str(optimizer) + "_" + str(activation) + "_" + str(learning_rate) + "_" + str(momentum) + "_" + str(weight_decay) + "_" + str(batch_norm) + "_" + str(regularization) + "_" + str(batch_size) + "_" + str(num_train_epoch) + ".txt", "w") as f:
         print(classification_results, file=f)
     
     print("Save the classification results in a TXT file.")
