@@ -5,6 +5,8 @@ import math
 import pandas as pd
 import xarray as xr
 
+# Pre-process y.
+
 # Read the dataset.
 
 soda = xr.open_dataset("data/soda_224_pt_l5.nc", decode_times=False)
@@ -135,6 +137,7 @@ def extract_y(lat, lon, filename, data_path=data_path):
     soda_temp_ssta = get_ssta(soda_temp_sst)
     save(data_path + "y_" + filename + ".npy", soda_temp_ssta)
 
+"""
 extract_y(26.75, 157.75, "nepacific")
 extract_y(40.75, -147.75, "nwpacific")
 extract_y(-40.75, -123.25, "southpacific")
@@ -143,5 +146,102 @@ extract_y(36.25, -43.75, "northatlantic")
 extract_y(-29.25, -16.25, "southatlantic")
 
 print("Save the output vectors in NPY files.")
+print("--------------------")
+print()
+"""
+
+# Pre-process X.
+
+# The Tasman Sea.
+soda = xr.open_dataset("data/soda_224_pt_l5.nc", decode_times=False)
+
+soda_tasman = soda.where(soda.LAT < -25, drop=True)
+soda_tasman = soda_tasman.where(soda.LAT > -40, drop=True)
+soda_tasman = soda_tasman.where(soda.LONN359_360 > 147, drop=True)
+soda_tasman = soda_tasman.where(soda.LONN359_360 < 170, drop=True)
+
+soda_array_tasman = soda_tasman.to_array(dim="VARIABLE")
+soda_smaller_tasman = np.array(soda_array_tasman[:,:,:,:,:,:])
+soda_smaller_tasman = soda_smaller_tasman[2,:,0,:,::,::] # Drop the bnds dimension and the other two variables.
+soda_smaller_tasman = np.squeeze(soda_smaller_tasman, axis=0)
+soda_smaller_tasman = np.transpose(soda_smaller_tasman, (2, 0, 1))
+
+soda_tasman_ssta = get_ssta(soda_smaller_tasman)
+
+save(data_path + "grids_tasman.npy", soda_tasman_ssta)
+
+print("Save the grids in an NPY file")
+print("--------------------")
+print()
+
+# The ENSO area.
+soda_enso_e = soda.where(soda.LAT < 5, drop=True)
+soda_enso_e = soda_enso_e.where(soda.LAT > -5, drop=True)
+soda_enso_e = soda_enso_e.where(soda.LONN359_360 > 160, drop=True)
+soda_enso_e = soda_enso_e.where(soda.LONN359_360 < 180, drop=True)
+
+soda_array_enso_e = soda_enso_e.to_array(dim="VARIABLE")
+soda_smaller_enso_e = np.array(soda_array_enso_e[:,:,:,:,:,:])
+soda_smaller_enso_e = soda_smaller_enso_e[2,:,0,:,::,::] # Drop the bnds dimension and the other two variables.
+soda_smaller_enso_e = np.squeeze(soda_smaller_enso_e, axis=0)
+soda_smaller_enso_e = np.transpose(soda_smaller_enso_e, (2, 0, 1))
+
+soda_enso_w = soda.where(soda.LAT < 5, drop=True)
+soda_enso_w = soda_enso_w.where(soda.LAT > -5, drop=True)
+soda_enso_w = soda_enso_w.where(soda.LONN359_360 > -180, drop=True)
+soda_enso_w = soda_enso_w.where(soda.LONN359_360 < -90, drop=True)
+
+soda_array_enso_w = soda_enso_w.to_array(dim="VARIABLE")
+soda_smaller_enso_w = np.array(soda_array_enso_w[:,:,:,:,:,:])
+soda_smaller_enso_w = soda_smaller_enso_w[2,:,0,:,::,::] # Drop the bnds dimension and the other two variables.
+soda_smaller_enso_w = np.squeeze(soda_smaller_enso_w, axis=0)
+soda_smaller_enso_w = np.transpose(soda_smaller_enso_w, (2, 0, 1))
+
+soda_smaller_enso = np.concatenate((soda_smaller_enso_e, soda_smaller_enso_w), axis=2)
+#soda_smaller_enso = np.c_[soda_smaller_enso_e, soda_smaller_enso_w]
+soda_enso_ssta = get_ssta(soda_smaller_enso)
+
+save(data_path + "grids_enso.npy", soda_enso_ssta)
+
+#print(soda_smaller_enso_e.shape)
+#print(soda_smaller_enso_w.shape)
+#print(soda_enso_ssta.shape)
+
+print("Save the grids in an NPY file")
+print("--------------------")
+print()
+
+# The south Pacific Ocean
+soda_southpacific_e = soda.where(soda.LAT < 0, drop=True)
+soda_southpacific_e = soda_southpacific_e.where(soda.LONN359_360 > 146, drop=True)
+soda_southpacific_e = soda_southpacific_e.where(soda.LONN359_360 < 180, drop=True)
+
+soda_array_southpacific_e = soda_southpacific_e.to_array(dim="VARIABLE")
+soda_smaller_southpacific_e = np.array(soda_array_southpacific_e[:,:,:,:,:,:])
+soda_smaller_southpacific_e = soda_smaller_southpacific_e[2,:,0,:,::,::] # Drop the bnds dimension and the other two variables.
+soda_smaller_southpacific_e = np.squeeze(soda_smaller_southpacific_e, axis=0)
+soda_smaller_southpacific_e = np.transpose(soda_smaller_southpacific_e, (2, 0, 1))
+
+soda_southpacific_w = soda.where(soda.LAT < 0, drop=True)
+soda_southpacific_w = soda_southpacific_w.where(soda.LONN359_360 > -180, drop=True)
+soda_southpacific_w = soda_southpacific_w.where(soda.LONN359_360 < -67, drop=True)
+
+soda_array_southpacific_w = soda_southpacific_w.to_array(dim="VARIABLE")
+soda_smaller_southpacific_w = np.array(soda_array_southpacific_w[:,:,:,:,:,:])
+soda_smaller_southpacific_w = soda_smaller_southpacific_w[2,:,0,:,::,::] # Drop the bnds dimension and the other two variables.
+soda_smaller_southpacific_w = np.squeeze(soda_smaller_southpacific_w, axis=0)
+soda_smaller_southpacific_w = np.transpose(soda_smaller_southpacific_w, (2, 0, 1))
+
+soda_smaller_southpacific = np.concatenate((soda_smaller_southpacific_e, soda_smaller_southpacific_w), axis=2)
+soda_southpacific_ssta = get_ssta(soda_smaller_southpacific)
+
+save(data_path + "grids_southpacific.npy", soda_southpacific_ssta)
+"""
+print(soda_smaller_southpacific_e.shape)
+print(soda_smaller_southpacific_w.shape)
+print(soda_southpacific_ssta.shape)
+"""
+
+print("Save the grids in an NPY file")
 print("--------------------")
 print()
