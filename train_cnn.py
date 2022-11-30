@@ -56,48 +56,6 @@ for lead_time in [1]:
     models_path = "out/"
     out_path = "out/"
     
-    """
-    # If running this script for the first time, process the dataset.
-    
-    soda = xr.open_dataset("data/soda_224_pt_l5.nc", decode_times=False)
-    
-    soda_array = soda.to_array(dim="VARIABLE")
-    soda_smaller = np.array(soda_array[:,:,:,:,:,:])
-    soda_smaller = soda_smaller[2,:,0,:,::4,::4] # Drop the bnds dimension and the other two variables; take every 4th longitude and latitude.
-    soda_smaller = np.squeeze(soda_smaller, axis=0)
-    
-    save(data_path + "grids_quarter.npy", soda_smaller)
-    
-    print("Save the grids in an NPY file")
-    print("--------------------")
-    print()
-    """
-    
-    """
-    # If running this script for the first time, process the dataset to get a smaller grid around Bay of Plenty.
-    
-    soda = xr.open_dataset("data/soda_224_pt_l5.nc", decode_times=False)
-    
-    soda["LONN359_360"] = soda.LONN359_360 + 180
-    
-    soda_bop = soda.where(soda.LAT < 0, drop=True)
-    soda_bop = soda_bop.where(soda.LAT > -70, drop=True)
-    soda_bop = soda_bop.where(soda.LONN359_360 > 107, drop=True)
-    soda_bop = soda_bop.where(soda.LONN359_360 < 247, drop=True)
-    
-    soda_array_bop = soda_bop.to_array(dim="VARIABLE")
-    soda_smaller_bop = np.array(soda_array_bop[:,:,:,:,:,:])
-    soda_smaller_bop = soda_smaller_bop[2,:,0,:,::,::] # Drop the bnds dimension and the other two variables.
-    soda_smaller_bop = np.squeeze(soda_smaller_bop, axis=0)
-    soda_smaller_bop = np.transpose(soda_smaller_bop, (2, 0, 1))
-    
-    save(data_path + "grids_bop.npy", soda_smaller_bop)
-    
-    print("Save the grids in an NPY file")
-    print("--------------------")
-    print()
-    """
-    
     # Load the grids.
     
     loc_name = "BoPQuarter"
