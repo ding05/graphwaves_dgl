@@ -1,3 +1,5 @@
+from processing_utils import *
+
 import numpy as np
 from numpy import asarray, save
 import math
@@ -37,15 +39,7 @@ print(soda_smaller_flattened.shape)
 print("----------")
 print()
 
-# Drop the land nodes (the rows in the node feature matrix with NAs).
-def dropna(arr, *args, **kwarg):
-    assert isinstance(arr, np.ndarray)
-    dropped=pd.DataFrame(arr).dropna(*args, **kwarg).values
-    if arr.ndim==1:
-        dropped=dropped.flatten()
-    return dropped
-
-soda_smaller_ocean_flattened = dropna(soda_smaller_flattened)
+soda_smaller_ocean_flattened = drop_rows_w_nas(soda_smaller_flattened)
 
 print("Shape of node feature matrix after land nodes were removed:")
 print(soda_smaller_ocean_flattened.shape)
@@ -64,49 +58,37 @@ print("The number of years for testing:", test_num_year)
 print("----------")
 print()
 
-def avg(list):
-  return sum(list) / len(list)
-
-# Get SSTAs from an SST vector.
-def get_ssta(time_series):
-  monthly_avg = []
-  for month in range(12):
-    monthly_sst = time_series[month:train_num_year*12:12]
-    monthly_avg.append(avg(monthly_sst))
-    time_series[month::12] -= monthly_avg[month]
-  return time_series
-
 # Create the other output (y) vectors.
 
 soda_westaus = soda.loc[dict(LAT="-29.75", LONN359_360="112.75")]
 soda_westaus_sst = np.zeros((len(soda.TIME), 1))
 soda_westaus_sst[:,:] = soda_westaus.variables["TEMP"][:,:]
-soda_westaus_ssta = get_ssta(soda_westaus_sst)
+soda_westaus_ssta = get_ssta(soda_westaus_sst, train_num_year)
 
 soda_labrador = soda.loc[dict(LAT="53.75", LONN359_360="-54.25")]
 soda_labrador_sst = np.zeros((len(soda.TIME), 1))
 soda_labrador_sst[:,:] = soda_labrador.variables["TEMP"][:,:]
-soda_labrador_ssta = get_ssta(soda_labrador_sst)
+soda_labrador_ssta = get_ssta(soda_labrador_sst, train_num_year)
 
 soda_equapacific = soda.loc[dict(LAT="-0.25", LONN359_360="-120.75")]
 soda_equapacific_sst = np.zeros((len(soda.TIME), 1))
 soda_equapacific_sst[:,:] = soda_equapacific.variables["TEMP"][:,:]
-soda_equapacific_ssta = get_ssta(soda_equapacific_sst)
+soda_equapacific_ssta = get_ssta(soda_equapacific_sst, train_num_year)
 
 soda_eastaus = soda.loc[dict(LAT="-37.25", LONN359_360="151.25")]
 soda_eastaus_sst = np.zeros((len(soda.TIME), 1))
 soda_eastaus_sst[:,:] = soda_eastaus.variables["TEMP"][:,:]
-soda_eastaus_ssta = get_ssta(soda_eastaus_sst)
+soda_eastaus_ssta = get_ssta(soda_eastaus_sst, train_num_year)
 
 soda_chatham = soda.loc[dict(LAT="-44.25", LONN359_360="-176.75")]
 soda_chatham_sst = np.zeros((len(soda.TIME), 1))
 soda_chatham_sst[:,:] = soda_chatham.variables["TEMP"][:,:]
-soda_chatham_ssta = get_ssta(soda_chatham_sst)
+soda_chatham_ssta = get_ssta(soda_chatham_sst, train_num_year)
 
 soda_med = soda.loc[dict(LAT="42.25", LONN359_360="6.75")]
 soda_med_sst = np.zeros((len(soda.TIME), 1))
 soda_med_sst[:,:] = soda_med.variables["TEMP"][:,:]
-soda_med_ssta = get_ssta(soda_med_sst)
+soda_med_ssta = get_ssta(soda_med_sst, train_num_year)
 
 print("Output vector:")
 print(soda_westaus_ssta)
@@ -127,23 +109,14 @@ save(data_path + "y_chatham.npy", soda_chatham_ssta)
 save(data_path + "y_med.npy", soda_med_ssta)
 """
 
-# More places
-# For convenience, define a function.
-
-def extract_y(lat, lon, filename, data_path=data_path):
-    soda_temp = soda.loc[dict(LAT=str(lat), LONN359_360=str(lon))]
-    soda_temp_sst = np.zeros((len(soda.TIME), 1))
-    soda_temp_sst[:,:] = soda_temp.variables["TEMP"][:,:]
-    soda_temp_ssta = get_ssta(soda_temp_sst)
-    save(data_path + "y_" + filename + ".npy", soda_temp_ssta)
-
 """
-extract_y(26.75, 157.75, "nepacific")
-extract_y(40.75, -147.75, "nwpacific")
-extract_y(-40.75, -123.25, "southpacific")
-extract_y(-11.25, 77.25, "indian")
-extract_y(36.25, -43.75, "northatlantic")
-extract_y(-29.25, -16.25, "southatlantic")
+# More places
+extract_y(26.75, 157.75, "nepacific", data_path)
+extract_y(40.75, -147.75, "nwpacific", data_path)
+extract_y(-40.75, -123.25, "southpacific", data_path)
+extract_y(-11.25, 77.25, "indian", data_path)
+extract_y(36.25, -43.75, "northatlantic", data_path)
+extract_y(-29.25, -16.25, "southatlantic", data_path)
 
 print("Save the output vectors in NPY files.")
 print("--------------------")
@@ -152,6 +125,53 @@ print()
 
 # Pre-process X.
 
+# The global grids.
+
+soda = xr.open_dataset("data/soda_224_pt_l5.nc", decode_times=False)
+
+"""
+soda_array = soda.to_array(dim="VARIABLE")
+soda_smaller = np.array(soda_array[:,:,:,:,:,:])
+soda_smaller = soda_smaller[2,:,0,:,::,::]
+soda_smaller = np.squeeze(soda_smaller, axis=0)
+
+soda_ssta = get_ssta(soda_smaller, train_num_year)
+
+save(data_path + "grids.npy", soda_ssta)
+
+soda_array = soda.to_array(dim="VARIABLE")
+soda_smaller = np.array(soda_array[:,:,:,:,:,:])
+soda_smaller = soda_smaller[2,:,0,:,::4,::4] # Drop the bnds dimension and the other two variables; take every 2nd longitude and latitude.
+soda_smaller = np.squeeze(soda_smaller, axis=0)
+
+soda_half_ssta = get_ssta(soda_smaller, train_num_year)
+
+save(data_path + "grids_half.npy", soda_half_ssta)
+
+soda_array = soda.to_array(dim="VARIABLE")
+soda_smaller = np.array(soda_array[:,:,:,:,:,:])
+soda_smaller = soda_smaller[2,:,0,:,::4,::4] # Drop the bnds dimension and the other two variables; take every 4th longitude and latitude.
+soda_smaller = np.squeeze(soda_smaller, axis=0)
+
+soda_quarter_ssta = get_ssta(soda_smaller, train_num_year)
+
+save(data_path + "grids_quarter.npy", soda_quarter_ssta)
+"""
+
+soda_array = soda.to_array(dim="VARIABLE")
+soda_smaller = np.array(soda_array[:,:,:,:,:,:])
+soda_smaller = soda_smaller[2,:,0,:,::20,::20] # Drop the bnds dimension and the other two variables; take every 4th longitude and latitude.
+soda_smaller = np.squeeze(soda_smaller, axis=0)
+
+soda_mini_ssta = get_ssta(soda_smaller, train_num_year)
+
+save(data_path + "grids_mini.npy", soda_mini_ssta)
+
+print("Save the grids in an NPY file")
+print("--------------------")
+print()
+
+"""
 # The Tasman Sea.
 soda = xr.open_dataset("data/soda_224_pt_l5.nc", decode_times=False)
 
@@ -166,7 +186,7 @@ soda_smaller_tasman = soda_smaller_tasman[2,:,0,:,::,::] # Drop the bnds dimensi
 soda_smaller_tasman = np.squeeze(soda_smaller_tasman, axis=0)
 soda_smaller_tasman = np.transpose(soda_smaller_tasman, (2, 0, 1))
 
-soda_tasman_ssta = get_ssta(soda_smaller_tasman)
+soda_tasman_ssta = get_ssta(soda_smaller_tasman, train_num_year)
 
 save(data_path + "grids_tasman.npy", soda_tasman_ssta)
 
@@ -199,7 +219,7 @@ soda_smaller_enso_w = np.transpose(soda_smaller_enso_w, (2, 0, 1))
 
 soda_smaller_enso = np.concatenate((soda_smaller_enso_e, soda_smaller_enso_w), axis=2)
 #soda_smaller_enso = np.c_[soda_smaller_enso_e, soda_smaller_enso_w]
-soda_enso_ssta = get_ssta(soda_smaller_enso)
+soda_enso_ssta = get_ssta(soda_smaller_enso, train_num_year)
 
 save(data_path + "grids_enso.npy", soda_enso_ssta)
 
@@ -233,15 +253,15 @@ soda_smaller_southpacific_w = np.squeeze(soda_smaller_southpacific_w, axis=0)
 soda_smaller_southpacific_w = np.transpose(soda_smaller_southpacific_w, (2, 0, 1))
 
 soda_smaller_southpacific = np.concatenate((soda_smaller_southpacific_e, soda_smaller_southpacific_w), axis=2)
-soda_southpacific_ssta = get_ssta(soda_smaller_southpacific)
+soda_southpacific_ssta = get_ssta(soda_smaller_southpacific, train_num_year)
 
 save(data_path + "grids_southpacific.npy", soda_southpacific_ssta)
-"""
-print(soda_smaller_southpacific_e.shape)
-print(soda_smaller_southpacific_w.shape)
-print(soda_southpacific_ssta.shape)
-"""
+
+#print(soda_smaller_southpacific_e.shape)
+#print(soda_smaller_southpacific_w.shape)
+#print(soda_southpacific_ssta.shape)
 
 print("Save the grids in an NPY file")
 print("--------------------")
 print()
+"""
