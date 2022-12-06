@@ -57,7 +57,7 @@ for lead_time in [1, 3, 6]:
         activation = "lrelu" + str(negative_slope) # "relu", "tanh", "sigm"
         alpha = 0.9
         optimizer = "RMSP" + str(alpha)
-        learning_rate = 0.02 # 0.05, 0.02, 0.01
+        learning_rate = 0.0001 # 0.05, 0.02, 0.01, 0.001
         momentum = 0.9
         weight_decay = 0.01
         normalization = "bn"
@@ -130,6 +130,7 @@ for lead_time in [1, 3, 6]:
     
         
         print("Start training.")
+        print()
         print("----------")
         print()
         
@@ -166,7 +167,7 @@ for lead_time in [1, 3, 6]:
                 loss.backward()
                 optim.step()
                 losses.append(loss.cpu().detach().numpy())
-            print()
+
             print('Training loss:', sum(losses) / len(losses))
             print()
             all_loss.append(sum(losses) / len(losses))
@@ -250,8 +251,8 @@ for lead_time in [1, 3, 6]:
     for i in range(len(preds)):
         preds[i] = np.squeeze(preds[i])
        
-    print(preds)
-    print(ys)
+    #print(preds)
+    #print(ys)
 
     # Average the predictions by all models.
     sum_preds = np.add.reduce(all_preds)
