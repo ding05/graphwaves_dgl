@@ -1,7 +1,9 @@
 import torch.nn as nn
 
 import dgl
+import dgl.function as fn
 from dgl.nn import GraphConv
+from dgl import DGLGraph
 
 class GCN(nn.Module):
     """
@@ -69,6 +71,39 @@ class GCN2(nn.Module):
                 nfeats = self.dropout(nfeats)
             nfeats = layer(g, nfeats, efeats)
         return nfeats.sum(1)
+
+gcn_msg = fn.copy_u(u='h', out='m')
+gcn_reduce = fn.sum(msg='m', out='h')
+
+class GCNLayer(nn.Module):
+    def __init__(self, in_feats, out_feats):
+        super(GCNLayer, self).__init__()
+        self.linear = nn.Linear(in_feats, out_feats)
+
+    def forward(self, g, feature):
+        # Creating a local scope so that all the stored ndata and edata
+        # (such as the `'h'` ndata below) are automatically popped out
+        # when the scope exits.
+        with g.local_scope():
+            g.ndata['h'] = feature
+            g.update_all(gcn_msg, gcn_reduce)
+            h = g.ndata['h']
+            return self.linear(h)
+
+class GCN3(nn.Module):
+    def __init__(self, in_feats, h_feats, out_feats):
+        super(GCN3, self).__init__()
+        self.layer1 = GCNLayer(in_feats, h_feats)
+        self.layer2 = GCNLayer(h_feats, h_feats)
+        self.layer3 = GCNLayer(h_feats, out_feats)
+        self.double()
+    
+    def forward(self, g, in_feat, edge_feat=None):
+        act_f = nn.LeakyReLU(0.1)
+        x = act_f(self.layer1(g, in_feat))
+        x = act_f(self.layer2(g, x))
+        x = self.layer3(g, x)
+        return x
 
 class GAT(nn.Module):
     """
