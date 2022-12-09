@@ -47,6 +47,7 @@ for lead_time in [1, 3, 6]:
         num_layer = 3
         num_hid_feat = 200
         num_out_feat = 100
+        #num_out_feat = 1
         window_size = 5
         train_split = 0.8
         lead_time = lead_time
@@ -125,9 +126,9 @@ for lead_time in [1, 3, 6]:
         
         model = GCN(window_size, num_hid_feat, num_out_feat)
         #model = GCN2(window_size, 1, 1, F.relu, 0.5)
+        #model = GCN3(window_size, num_hid_feat, num_out_feat)
         #optim = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
         optim = torch.optim.RMSprop(model.parameters(), lr=learning_rate, alpha=alpha, weight_decay=weight_decay, momentum=momentum)
-    
         
         print("Start training.")
         print()
