@@ -106,13 +106,10 @@ print("The number of years for testing:", test_num_year)
 print("----------")
 print()
 
-def avg(list):
-  return sum(list) / len(list)
-
 # Get SSTAs from an SST vector.
 soda_ssta = []
 for row in soda_smaller_ocean_flattened:
-  soda_ssta.append(get_ssta(row))
+  soda_ssta.append(get_ssta(row, train_num_year))
 soda_ssta = np.array(soda_ssta)
 
 print("Node feature matrix after SSTs were replaced by SSTAs:")
@@ -131,13 +128,14 @@ print("Update the node feature matrix and saving it in an NPY file.")
 print("--------------------")
 print()
 
+"""
 # Create the output (y) vector.
 
 soda_bop = soda.loc[dict(LAT="-34.75", LONN359_360="177.75")]
 soda_bop_sst = np.zeros((len(soda.TIME), 1))
 soda_bop_sst[:,:] = soda_bop.variables["TEMP"][:,:]
 
-soda_bop_ssta = get_ssta(soda_bop_sst)
+soda_bop_ssta = get_ssta(soda_bop_sst, train_num_year)
 
 print("Output vector:")
 print(soda_bop_ssta)
@@ -153,3 +151,4 @@ save(data_path + "y.npy", soda_bop_ssta)
 print("Save the output vector in an NPY file.")
 print("--------------------")
 print()
+"""
