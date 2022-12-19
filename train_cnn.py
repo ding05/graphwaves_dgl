@@ -76,7 +76,7 @@ for lead_time in [1]:
     # For one variable: SSTA
     
     for i in range(len(y)-window_size-lead_time):
-      dataset.append([torch.tensor(grids[i:i+window_size]), torch.tensor(y[i+window_size+lead_time-1])])
+        dataset.append([torch.tensor(grids[i:i+window_size]), torch.tensor(y[i+window_size+lead_time-1])])
     
     """
     # For two variables: SSTA and salinity
