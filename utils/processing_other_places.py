@@ -58,6 +58,7 @@ print("The number of years for testing:", test_num_year)
 print("----------")
 print()
 
+"""
 # Create the other output (y) vectors.
 
 soda_westaus = soda.loc[dict(LAT="-29.75", LONN359_360="112.75")]
@@ -100,16 +101,14 @@ print()
 # Save the output vector.
 
 data_path = "data/"
-"""
+
 save(data_path + "y_westaus.npy", soda_westaus_ssta)
 save(data_path + "y_labrador.npy", soda_labrador_ssta)
 save(data_path + "y_equapacific.npy", soda_equapacific_ssta)
 save(data_path + "y_eastaus.npy", soda_eastaus_ssta)
 save(data_path + "y_chatham.npy", soda_chatham_ssta)
 save(data_path + "y_med.npy", soda_med_ssta)
-"""
 
-"""
 # More places
 extract_y(26.75, 157.75, "nepacific", data_path)
 extract_y(40.75, -147.75, "nwpacific", data_path)
@@ -129,6 +128,8 @@ print()
 
 soda = xr.open_dataset("data/soda_224_pt_l5.nc", decode_times=False)
 
+data_path = "data/"
+
 """
 soda_array = soda.to_array(dim="VARIABLE")
 soda_smaller = np.array(soda_array[:,:,:,:,:,:])
@@ -138,10 +139,11 @@ soda_smaller = np.squeeze(soda_smaller, axis=0)
 soda_ssta = get_ssta(soda_smaller, train_num_year)
 
 save(data_path + "grids.npy", soda_ssta)
+"""
 
 soda_array = soda.to_array(dim="VARIABLE")
 soda_smaller = np.array(soda_array[:,:,:,:,:,:])
-soda_smaller = soda_smaller[2,:,0,:,::4,::4] # Drop the bnds dimension and the other two variables; take every 2nd longitude and latitude.
+soda_smaller = soda_smaller[2,:,0,:,::2,::2] # Drop the bnds dimension and the other two variables; take every 2nd longitude and latitude.
 soda_smaller = np.squeeze(soda_smaller, axis=0)
 
 soda_half_ssta = get_ssta(soda_smaller, train_num_year)
@@ -156,18 +158,19 @@ soda_smaller = np.squeeze(soda_smaller, axis=0)
 soda_quarter_ssta = get_ssta(soda_smaller, train_num_year)
 
 save(data_path + "grids_quarter.npy", soda_quarter_ssta)
-"""
 
+"""
 soda_array = soda.to_array(dim="VARIABLE")
 soda_smaller = np.array(soda_array[:,:,:,:,:,:])
-soda_smaller = soda_smaller[2,:,0,:,::20,::20] # Drop the bnds dimension and the other two variables; take every 4th longitude and latitude.
+soda_smaller = soda_smaller[2,:,0,:,::20,::20] # Drop the bnds dimension and the other two variables; take every 20th longitude and latitude.
 soda_smaller = np.squeeze(soda_smaller, axis=0)
 
 soda_mini_ssta = get_ssta(soda_smaller, train_num_year)
 
 save(data_path + "grids_mini.npy", soda_mini_ssta)
+"""
 
-print("Save the grids in an NPY file")
+print("Save the grids in NPY files.")
 print("--------------------")
 print()
 
@@ -190,7 +193,7 @@ soda_tasman_ssta = get_ssta(soda_smaller_tasman, train_num_year)
 
 save(data_path + "grids_tasman.npy", soda_tasman_ssta)
 
-print("Save the grids in an NPY file")
+print("Save the grids in an NPY file.")
 print("--------------------")
 print()
 
@@ -227,7 +230,7 @@ save(data_path + "grids_enso.npy", soda_enso_ssta)
 #print(soda_smaller_enso_w.shape)
 #print(soda_enso_ssta.shape)
 
-print("Save the grids in an NPY file")
+print("Save the grids in an NPY file.")
 print("--------------------")
 print()
 
@@ -261,7 +264,7 @@ save(data_path + "grids_southpacific.npy", soda_southpacific_ssta)
 #print(soda_smaller_southpacific_w.shape)
 #print(soda_southpacific_ssta.shape)
 
-print("Save the grids in an NPY file")
+print("Save the grids in an NPY file.")
 print("--------------------")
 print()
 """
