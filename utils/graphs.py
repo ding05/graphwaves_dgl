@@ -1,3 +1,4 @@
+import numpy as np
 from numpy import load
 
 import torch
@@ -19,6 +20,12 @@ num_sample = 1680-window_size-lead_time+1
 node_features = load(data_path + "node_features.npy")
 edge_features = load(data_path + "edge_features.npy")
 y = load(data_path + "y.npy")
+
+# Normalize the data.
+
+node_features = node_features / np.linalg.norm (node_features)
+edge_features = edge_features / np.linalg.norm (edge_features)
+y = y / np.linalg.norm (y)
 
 node_num = node_features.shape[0]
 
@@ -92,6 +99,30 @@ class SSTAGraphDataset(DGLDataset):
 
     def __getitem__(self, i):
         return self.graphs[i], self.ys[i]
+
+    def __len__(self):
+        return len(self.graphs)
+
+class SSTAGraphDataset_NodeLabels(DGLDataset):
+    """
+    Create a DGL graph dataset.
+    """
+    def __init__(self):
+        super().__init__(name="synthetic")
+
+    def process(self):
+    
+        self.graphs = []
+        
+        for i in range(num_sample):
+          graph_temp = dgl.graph((u, v))
+          graph_temp.ndata["feat"] = torch.tensor(node_features[:, i:i+window_size])
+          graph_temp.ndata['label'] =  torch.tensor(node_features[:, i+window_size+lead_time-1])
+          graph_temp.edata["w"] = graph.edata["w"]
+          self.graphs.append(graph_temp)
+
+    def __getitem__(self, i):
+        return self.graphs[i]
 
     def __len__(self):
         return len(self.graphs)
