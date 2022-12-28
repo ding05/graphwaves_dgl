@@ -126,3 +126,16 @@ class GAT(nn.Module):
         h = act_f(h)
         h = self.layer3(h)
         return h
+
+class GCN4(nn.Module):
+    def __init__(self, in_feats, h_feats, out_feats=1):
+        super(GCN4, self).__init__()
+        self.conv1 = GraphConv(in_feats, h_feats)
+        self.conv2 = GraphConv(h_feats, out_feats)
+        self.double()
+    
+    def forward(self, g, in_feats):
+        act_f = nn.LeakyReLU(0.1)
+        h = act_f(self.conv1(g, in_feats))
+        h = self.conv2(g, h)
+        return h
