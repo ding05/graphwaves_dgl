@@ -92,6 +92,7 @@ for lead_time in [1, 3, 6]:
         num_examples = len(dataset)
         num_train = int(num_examples * train_split)
         
+        """
         # Sequential sampler
         train_dataloader = GraphDataLoader(dataset, sampler=torch.arange(num_train), batch_size=batch_size, drop_last=False)
         test_dataloader = GraphDataLoader(dataset, sampler=torch.arange(num_train, num_examples), batch_size=1, drop_last=False)
@@ -121,12 +122,14 @@ for lead_time in [1, 3, 6]:
         print(graphs)
         print("--------------------")
         print()
+        """
         
         # Train the GCN.
         
-        model = GCN(window_size, num_hid_feat, num_out_feat)
+        #model = GCN(window_size, num_hid_feat, num_out_feat)
         #model = GCN2(window_size, 1, 1, F.relu, 0.5)
         #model = GCN3(window_size, num_hid_feat, num_out_feat)
+        model = GCN4(window_size, num_hid_feat)
         #optim = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
         optim = torch.optim.RMSprop(model.parameters(), lr=learning_rate, alpha=alpha, weight_decay=weight_decay, momentum=momentum)
         
@@ -138,6 +141,25 @@ for lead_time in [1, 3, 6]:
         # Start time
         start = time.time()
         
+        g = dataset[0]
+        features = g.ndata['feat']
+        labels = g.ndata['label']
+        
+        for epoch in range(num_train_epoch):
+
+            model.train()
+            preds = model(g, features)
+            #preds = torch.tensor(preds, dtype=torch.long)
+            loss = F.nll_loss(preds, labels.long())
+
+            optim.zero_grad()
+            loss.backward()
+            optim.step()
+        
+        # End time
+        stop = time.time()
+        
+"""    
         all_loss = []
         all_eval = []
         
@@ -389,3 +411,4 @@ for lead_time in [1, 3, 6]:
     print("Save the classification results in a TXT file.")
     print("----------")
     print()
+"""
