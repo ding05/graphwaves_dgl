@@ -32,7 +32,7 @@ print()
 # Create the node feature matrix.
 
 soda_smaller_transposed = soda_smaller.transpose(1,2,0)
-soda_smaller_flattened = soda_smaller_transposed.reshape(soda_smaller.shape[1] * soda_smaller.shape[2],len(soda_smaller))
+soda_smaller_flattened = soda_smaller_transposed.reshape(soda_smaller.shape[1] * soda_smaller.shape[2], len(soda_smaller))
 
 print("Shape of node feature matrix:")
 print(soda_smaller_flattened.shape)
