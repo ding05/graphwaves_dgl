@@ -22,9 +22,9 @@ def get_ssta(time_series, train_num_year):
 def extract_y(lat, lon, filename, data_path):
     soda_temp = soda.loc[dict(LAT=str(lat), LONN359_360=str(lon))]
     soda_temp_sst = np.zeros((len(soda.TIME), 1))
-    soda_temp_sst[:,:] = soda_temp.variables["TEMP"][:,:]
+    soda_temp_sst[:,:] = soda_temp.variables['TEMP'][:,:]
     soda_temp_ssta = get_ssta(soda_temp_sst)
-    save(data_path + "y_" + filename + ".npy", soda_temp_ssta)
+    save(data_path + 'y_' + filename + '.npy', soda_temp_ssta)
 
 def avg(list):
     return sum(list) / len(list)

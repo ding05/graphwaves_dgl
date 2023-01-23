@@ -9,22 +9,22 @@ from sklearn.metrics.pairwise import haversine_distances
 
 # Read the dataset.
 
-soda = xr.open_dataset("data/soda_224_pt_l5.nc", decode_times=False)
-print("SODA v2.2.4:")
+soda = xr.open_dataset('data/soda_224_pt_l5.nc', decode_times=False)
+print('SODA v2.2.4:')
 print(soda)
-print("--------------------")
+print('--------------------')
 print()
 
 # Turn it into a smaller size.
 
-soda_array = soda.to_array(dim="VARIABLE")
+soda_array = soda.to_array(dim='VARIABLE')
 soda_smaller = np.array(soda_array[:,:,:,:,:,:])
 soda_smaller = soda_smaller[2,:,0,:,::20,::20] # Drop the bnds dimension and the other two variables; take every 20th longitude and latitude.
 soda_smaller = np.squeeze(soda_smaller, axis=0)
 
-print("Shape of resized SODA:")
+print('Shape of resized SODA:')
 print(soda_smaller.shape)
-print("--------------------")
+print('--------------------')
 print()
 
 # Create the node feature matrix.
@@ -32,9 +32,9 @@ print()
 soda_smaller_transposed = soda_smaller.transpose(1,2,0)
 soda_smaller_flattened = soda_smaller_transposed.reshape(soda_smaller.shape[1] * soda_smaller.shape[2],len(soda_smaller))
 
-print("Shape of node feature matrix:")
+print('Shape of node feature matrix:')
 print(soda_smaller_flattened.shape)
-print("----------")
+print('----------')
 print()
 
 # Drop the land nodes (the rows in the node feature matrix with NAs).
@@ -47,9 +47,9 @@ def dropna(arr, *args, **kwarg):
 
 soda_smaller_ocean_flattened = dropna(soda_smaller_flattened)
 
-print("Shape of node feature matrix after land nodes were removed:")
+print('Shape of node feature matrix after land nodes were removed:')
 print(soda_smaller_ocean_flattened.shape)
-print("--------------------")
+print('--------------------')
 print()
 
 # Create the edge feature matrix.
@@ -82,21 +82,21 @@ distance_ocean_diag[distance_ocean_diag==0] = 1
 
 distance_ocean_recip = np.reciprocal(distance_ocean_diag)
 
-print("Edge feature matrix:")
+print('Edge feature matrix:')
 print(distance_ocean_recip)
-print("Shape of edge feature matrix:")
+print('Shape of edge feature matrix:')
 print(distance_ocean_recip.shape)
-print("--------------------")
+print('--------------------')
 print()
 
 # Save the two output matrices.
 
-data_path = "data/"
-save(data_path + "node_features.npy", soda_smaller_ocean_flattened)
-save(data_path + "edge_features.npy", distance_ocean_recip)
+data_path = 'data/'
+save(data_path + 'node_features.npy', soda_smaller_ocean_flattened)
+save(data_path + 'edge_features.npy', distance_ocean_recip)
 
-print("Save the two matrices in NPY files.")
-print("--------------------")
+print('Save the two matrices in NPY files.')
+print('--------------------')
 print()
 
 # Replace SSTs with SSTAs in the node feature matrix.
@@ -106,9 +106,9 @@ num_year = soda_smaller_ocean_flattened.shape[1] / 12
 train_num_year = math.ceil(num_year * train_split)
 test_num_year = int(num_year - train_num_year)
 
-print("The number of years for training:", train_num_year)
-print("The number of years for testing:", test_num_year)
-print("----------")
+print('The number of years for training:', train_num_year)
+print('The number of years for testing:', test_num_year)
+print('----------')
 print()
 
 def avg(list):
@@ -128,41 +128,41 @@ for row in soda_smaller_ocean_flattened:
   soda_ssta.append(get_ssta(row))
 soda_ssta = np.array(soda_ssta)
 
-print("Node feature matrix after SSTs were replaced by SSTAs:")
+print('Node feature matrix after SSTs were replaced by SSTAs:')
 print(soda_ssta)
-print("----------")
+print('----------')
 print()
 
-print("Shape of the updated node feature matrix:")
+print('Shape of the updated node feature matrix:')
 print(soda_ssta.shape)
-print("----------")
+print('----------')
 print()
 
-save(data_path + "node_features.npy", soda_ssta)
+save(data_path + 'node_features.npy', soda_ssta)
 
-print("Update the node feature matrix and saving it in an NPY file.")
-print("--------------------")
+print('Update the node feature matrix and saving it in an NPY file.')
+print('--------------------')
 print()
 
 # Create the output (y) vector.
 
-soda_bop = soda.loc[dict(LAT="-34.75", LONN359_360="177.75")]
+soda_bop = soda.loc[dict(LAT='-34.75', LONN359_360='177.75')]
 soda_bop_sst = np.zeros((len(soda.TIME), 1))
-soda_bop_sst[:,:] = soda_bop.variables["TEMP"][:,:]
+soda_bop_sst[:,:] = soda_bop.variables['TEMP'][:,:]
 
 soda_bop_ssta = get_ssta(soda_bop_sst)
 
-print("Output vector:")
+print('Output vector:')
 print(soda_bop_ssta)
-print("Shape of output vector:")
+print('Shape of output vector:')
 print(soda_bop_ssta.shape)
-print("----------")
+print('----------')
 print()
 
 # Save the output vector.
 
-save(data_path + "y.npy", soda_bop_ssta)
+save(data_path + 'y.npy', soda_bop_ssta)
 
-print("Save the output vector in an NPY file.")
-print("--------------------")
+print('Save the output vector in an NPY file.')
+print('--------------------')
 print()

@@ -34,7 +34,7 @@ def weighted_mse(preds, targets, weights=5.):
     return loss
 
 def weighted_mae(preds, targets, weights=5.):
-    loss = F.l1_loss(preds, targets, reduction="none")
+    loss = F.l1_loss(preds, targets, reduction='none')
     if weights is not None:
         loss *= torch.tensor(weights).expand_as(loss)
     loss = torch.mean(loss)
@@ -51,18 +51,18 @@ def weighted_huber(preds, targets, weights=5., beta=1.):
 
 # Focal-R loss functions (Yang et al., 2021)
 
-def weighted_focal_mse(preds, targets, weights=5., activate="sigmoid", beta=.2, gamma=1.):
+def weighted_focal_mse(preds, targets, weights=5., activate='sigmoid', beta=.2, gamma=1.):
     loss = (preds - targets) ** 2
-    loss *= (torch.tanh(beta * torch.abs(preds - targets))) ** gamma if activate == "tanh" else \
+    loss *= (torch.tanh(beta * torch.abs(preds - targets))) ** gamma if activate == 'tanh' else \
         (2 * torch.sigmoid(beta * torch.abs(preds - targets)) - 1) ** gamma
     if weights is not None:
         loss *= torch.tensor(weights).expand_as(loss)
     loss = torch.mean(loss)
     return loss
     
-def weighted_focal_mae(preds, targets, weights=5., activate="sigmoid", beta=.2, gamma=1.):
-    loss = F.l1_loss(preds, targets, reduction="none")
-    loss *= (torch.tanh(beta * torch.abs(preds - targets))) ** gamma if activate == "tanh" else \
+def weighted_focal_mae(preds, targets, weights=5., activate='sigmoid', beta=.2, gamma=1.):
+    loss = F.l1_loss(preds, targets, reduction='none')
+    loss *= (torch.tanh(beta * torch.abs(preds - targets))) ** gamma if activate == 'tanh' else \
         (2 * torch.sigmoid(beta * torch.abs(preds - targets)) - 1) ** gamma
     if weights is not None:
         loss *= torch.tensor(weights).expand_as(loss)

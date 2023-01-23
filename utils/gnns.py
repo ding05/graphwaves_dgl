@@ -27,8 +27,8 @@ class GCN(nn.Module):
         h = act_f(h)
         h = self.conv3(g, h)
         h = self.out(h)
-        g.ndata["h"] = h
-        return dgl.mean_nodes(g, "h")
+        g.ndata['h'] = h
+        return dgl.mean_nodes(g, 'h')
 
 class GNNLayer(nn.Module):
     """
@@ -42,16 +42,16 @@ class GNNLayer(nn.Module):
         self.double()
 
     def message_func(self, edges):
-        return {"m": F.relu(self.W_msg(torch.cat([edges.src["h"], torch.unsqueeze(edges.data["h"], dim=1)], 1)))}
+        return {'m': F.relu(self.W_msg(torch.cat([edges.src['h'], torch.unsqueeze(edges.data['h'], dim=1)], 1)))}
 
     def forward(self, g_dgl, nfeats, efeats):
         with g_dgl.local_scope():
             g = g_dgl
-            g.ndata["h"] = nfeats
-            g.edata["h"] = efeats
-            g.update_all(self.message_func, fn.sum("m", "h_neigh"))
-            g.ndata["h"] = F.relu(self.W_apply(torch.cat([g.ndata["h"], g.ndata["h_neigh"]], 1)))
-            return g.ndata["h"]
+            g.ndata['h'] = nfeats
+            g.edata['h'] = efeats
+            g.update_all(self.message_func, fn.sum('m', 'h_neigh'))
+            g.ndata['h'] = F.relu(self.W_apply(torch.cat([g.ndata['h'], g.ndata['h_neigh']], 1)))
+            return g.ndata['h']
 
 class GCN2(nn.Module):
     """
