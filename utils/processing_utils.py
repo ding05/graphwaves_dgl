@@ -1,4 +1,5 @@
 import numpy as np
+from numpy import save
 import pandas as pd
 
 # Drop the land nodes (the rows in the node feature matrix with NAs).
@@ -19,11 +20,11 @@ def get_ssta(time_series, train_num_year):
     return time_series
 
 # Extract output vectors for more places.
-def extract_y(lat, lon, filename, data_path):
+def extract_y(lat, lon, filename, data_path, soda, train_num_year):
     soda_temp = soda.loc[dict(LAT=str(lat), LONN359_360=str(lon))]
     soda_temp_sst = np.zeros((len(soda.TIME), 1))
     soda_temp_sst[:,:] = soda_temp.variables['TEMP'][:,:]
-    soda_temp_ssta = get_ssta(soda_temp_sst)
+    soda_temp_ssta = get_ssta(soda_temp_sst, train_num_year)
     save(data_path + 'y_' + filename + '.npy', soda_temp_ssta)
 
 def avg(list):

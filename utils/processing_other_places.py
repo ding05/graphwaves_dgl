@@ -110,12 +110,12 @@ save(data_path + 'y_chatham.npy', soda_chatham_ssta)
 save(data_path + 'y_med.npy', soda_med_ssta)
 
 # More places
-extract_y(26.75, 157.75, 'nepacific', data_path)
-extract_y(40.75, -147.75, 'nwpacific', data_path)
-extract_y(-40.75, -123.25, 'southpacific', data_path)
-extract_y(-11.25, 77.25, 'indian', data_path)
-extract_y(36.25, -43.75, 'northatlantic', data_path)
-extract_y(-29.25, -16.25, 'southatlantic', data_path)
+extract_y(26.75, 157.75, 'nepacific', data_path, soda, train_num_year)
+extract_y(40.75, -147.75, 'nwpacific', data_path, soda, train_num_year)
+extract_y(-40.75, -123.25, 'southpacific', data_path, soda, train_num_year)
+extract_y(-11.25, 77.25, 'indian', data_path, soda, train_num_year)
+extract_y(36.25, -43.75, 'northatlantic', data_path, soda, train_num_year)
+extract_y(-29.25, -16.25, 'southatlantic', data_path, soda, train_num_year)
 
 print('Save the output vectors in NPY files.')
 print('--------------------')
@@ -268,3 +268,10 @@ print('Save the grids in an NPY file.')
 print('--------------------')
 print()
 """
+
+nz_lats = [-34.25, -36.75, -37.25, -37.75, -38.75, -40.75, -41.25, -43.75, -43.75, -44.25, -45.75, -47.25]
+nz_lons = [172.25, 175.25, 176.75, 174.75, 174.25, 174.25, 176.25, -176.75, 173.25, 167.25, 170.75, 167.75]
+nz_locs = ['cr', 'mg', 'bop', 'r', 't', 'cs', 'w', 'ci', 'bd', 'f', 'od', 'si']
+
+for i in range(len(nz_locs)):
+    extract_y(nz_lats[i], nz_lons[i], nz_locs[i], data_path, soda, train_num_year)
