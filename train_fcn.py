@@ -33,7 +33,7 @@ for lead_time in [1]:
     all_preds = []
     
     #for model_num in range(10):
-    for model_num in range(1):
+    for model_num in range(5):
     
         net_class = 'FCN' #
         num_layer = 2 #
@@ -54,7 +54,7 @@ for lead_time in [1]:
         alpha = 0.9
         optimizer = 'RMSP' + str(alpha) # SGD, Adam
         #learning_rate = 0.002 # 0.000001 for grids
-        learning_rate = 0.000001
+        learning_rate = 0.002
         momentum = 0.9
         #momentum = 0
         weight_decay = 0.01
@@ -64,7 +64,7 @@ for lead_time in [1]:
         regularization = 'L1' + str(reg_factor) + '_nd'
         batch_size = 512 # >= 120 crashed for original size, >= 550 crashed for half size, >= 480 crashed for half size and two variables
         num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
-        num_train_epoch = 10
+        num_train_epoch = 200
         
         data_path = 'data/'
         models_path = 'out/'
@@ -73,23 +73,26 @@ for lead_time in [1]:
         # Load the input.
         
         #loc_name = 'BoP'
-        loc_name = 'BoPwSODAMini'
+        loc_name = 'BDwNZ'
         
-        x = load(data_path + 'y.npy').squeeze(axis=1)
-        x1 = load(data_path + 'y_eastaus.npy').squeeze(axis=1)
-        x2 = load(data_path + 'y_equapacific.npy').squeeze(axis=1)
-        x3 = load(data_path + 'y_nepacific.npy').squeeze(axis=1)
-        x4 = load(data_path + 'y_nwpacific.npy').squeeze(axis=1)
-        x5 = load(data_path + 'y_southpacific.npy').squeeze(axis=1)
-        x6 = load(data_path + 'y_indian.npy').squeeze(axis=1)
-        x7 = load(data_path + 'y_northatlantic.npy').squeeze(axis=1)
-        x8 = load(data_path + 'y_southatlantic.npy').squeeze(axis=1)
+        x0 = load(data_path + 'y_bd.npy').squeeze(axis=1)
+        x1 = load(data_path + 'y_bop.npy').squeeze(axis=1)
+        x2 = load(data_path + 'y_ci.npy').squeeze(axis=1)
+        x3 = load(data_path + 'y_cr.npy').squeeze(axis=1)
+        x4 = load(data_path + 'y_cs.npy').squeeze(axis=1)
+        x5 = load(data_path + 'y_f.npy').squeeze(axis=1)
+        x6 = load(data_path + 'y_mg.npy').squeeze(axis=1)
+        x7 = load(data_path + 'y_od.npy').squeeze(axis=1)
+        x8 = load(data_path + 'y_r.npy').squeeze(axis=1)
+        x9 = load(data_path + 'y_si.npy').squeeze(axis=1)
+        x10 = load(data_path + 'y_t.npy').squeeze(axis=1)
+        x11 = load(data_path + 'y_w.npy').squeeze(axis=1)
         
         grids = load(data_path + 'grids_mini.npy')
         grids[np.isnan(grids)] = 0 # Convert NAs into zeroes.
         flattened_grids = grids.reshape(grids.shape[0], grids.shape[1] * grids.shape[2]) # Flatten the grids to fit the FCN.
         
-        y = load(data_path + 'y.npy').squeeze(axis=1)
+        y = load(data_path + 'y_bd.npy').squeeze(axis=1)
         
         """
         x = x.squeeze(axis=1)
@@ -99,16 +102,16 @@ for lead_time in [1]:
         y_all = y
         #num_var = 1
         #num_var = 2
-        #num_var = 9
-        num_var = grids.shape[1] * grids.shape[2]
+        num_var = 12
+        #num_var = grids.shape[1] * grids.shape[2]
         
         dataset = []
         
         for i in range(len(y)-window_size-lead_time):
             #dataset.append([torch.tensor(x[i:i+window_size]), torch.tensor(y[i+window_size+lead_time-1])])
             #dataset.append([torch.tensor(np.concatenate((x[i:i+window_size], x1[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
-            #dataset.append([torch.tensor(np.concatenate((x[i:i+window_size], x1[i:i+window_size], x2[i:i+window_size], x3[i:i+window_size], x4[i:i+window_size], x5[i:i+window_size], x6[i:i+window_size], x7[i:i+window_size], x8[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
-            dataset.append([torch.tensor(np.concatenate((flattened_grids[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
+            dataset.append([torch.tensor(np.concatenate((x0[i:i+window_size], x1[i:i+window_size], x2[i:i+window_size], x3[i:i+window_size], x4[i:i+window_size], x5[i:i+window_size], x6[i:i+window_size], x7[i:i+window_size], x8[i:i+window_size], x9[i:i+window_size], x10[i:i+window_size], x11[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
+            #dataset.append([torch.tensor(np.concatenate((flattened_grids[i:i+window_size]))), torch.tensor(y[i+window_size+lead_time-1])])
             # Add L1 normalization
             #dataset.append([F.normalize(torch.tensor(np.concatenate((flattened_grids[i:i+window_size]))), p=1.0, eps=1e-3, dim=0), torch.tensor(y[i+window_size+lead_time-1])])
             
