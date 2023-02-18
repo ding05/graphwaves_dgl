@@ -29,7 +29,7 @@ import matplotlib.transforms as mtransforms
 for lead_time in [1]:
 #for weight in [2, 3, 5, 10, 20, 50, 100]:
 
-    # Train 10 models for the same configuration and average the predictions, to minimize the effect of randomness.
+    # Train multiple models for the same configuration and average the predictions, to minimize the effect of randomness.
     all_preds = []
     
     #for model_num in range(10):
@@ -38,9 +38,9 @@ for lead_time in [1]:
         net_class = 'FCN' #
         num_layer = 2 #
         #num_hid_feat = 50 # 500 for grids
-        num_hid_feat = 500
+        num_hid_feat = 50
         num_out_feat = 1 #
-        window_size = 5
+        window_size = 6
         train_split = 0.8
         lead_time = lead_time
         noise_var = 0.01
