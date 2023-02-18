@@ -90,7 +90,7 @@ for model_num in range(1):
     print('----------')
     print()
     
-    x_all, y_all = data_all_normalized[:,:x_all.shape[1]], data_all_normalized[:,-1:]
+    x_all, y_all = data_all_normalized[:,:x_all.shape[1]], np.squeeze(data_all_normalized[:,-1:])
     
     #print(x_all)
     print('Input data shape:', x_all.shape)
@@ -108,3 +108,51 @@ for model_num in range(1):
     
     print('--------------------')
     print()
+    
+    # Set up a PNN.
+    
+    class PNN(nn.Module):
+        def __init__(self, num_input_feat, num_out_feat, num_hid_feat):
+            super(PNN, self).__init__()
+            self.hidden_layer = nn.Linear(num_input_feat, num_hid_feat)
+            self.output_layer = nn.Linear(num_hid_feat, num_out_feat)
+            self.rbf_layer = nn.Linear(num_out_feat, num_hid_feat, bias=False)
+    
+        def forward(self, input_seq):
+            hidden_output = torch.sigmoid(self.hidden_layer(input_seq))
+            output_mean = self.output_layer(hidden_output)
+            output_activation = self.rbf_layer(output_mean)
+            print(output_activation.shape)
+            print(output_mean.shape)
+            output_var = torch.sum((output_activation - output_mean)**2, dim=1, keepdim=True)
+            output_seq = output_mean + output_var
+            return output_seq
+    
+    model = PNN(num_input_feat=x_all.shape[1], num_out_feat=1, num_hid_feat=num_hid_feat)
+    optim = torch.optim.RMSprop(model.parameters(), lr=learning_rate, alpha=alpha, weight_decay=weight_decay, momentum=momentum)
+    criterion = nn.MSELoss()
+    
+    # Train the model.
+    
+    # Start time
+    start = time.time()
+    
+    for epoch in range(num_train_epoch):
+        print('Epoch ' + str(epoch))
+        print()
+        
+        running_loss = 0.0
+        
+        for i in range(len(x_train)):
+            optim.zero_grad()
+            input_seq = torch.from_numpy(x_train[i]).float()
+            output_seq = torch.from_numpy(np.array([y_train[i]])).float()
+            predicted_seq = model(input_seq)
+            loss = criterion(predicted_seq, output_seq)
+            loss.backward()
+            optim.step()
+    
+            # accumulate loss
+            running_loss += loss.item()
+            
+        print('Epoch %d loss: %.3f' % (epoch + 1, running_loss / x_train.shape[0]))
