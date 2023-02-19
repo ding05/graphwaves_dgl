@@ -26,8 +26,8 @@ all_preds = []
 for model_num in range(1):
 
     net_class = 'PNN'
-    num_layer = 2
-    num_hid_feat = 50
+    num_layer = 3
+    #num_hid_feat = 50
     num_out_feat = 1
     window_size = 6
     train_split = 0.8
@@ -43,10 +43,10 @@ for model_num in range(1):
     momentum = 0.9
     #momentum = 0
     weight_decay = 0.01
-    normalization = 'L1_nbn'
-    normalization = 'bn'
-    reg_factor = 0.0001
-    regularization = 'L1' + str(reg_factor) + '_nd'
+    #normalization = 'L1_nbn'
+    #normalization = 'bn'
+    #reg_factor = 0.0001
+    #regularization = 'L1' + str(reg_factor) + '_nd'
     batch_size = 'full'
     num_sample = 1680-window_size-lead_time+1 # max: node_features.shape[1]-window_size-lead_time+1
     num_train_epoch = 200
@@ -82,7 +82,6 @@ for model_num in range(1):
     
     x_all, y_all = np.array(x_all), np.array(y_all)
     
-    """
     # Normalize the data to [-1, 1].
     data_all = np.concatenate((x_all, y_all.reshape(-1, 1)), axis=1)
     data_all_normalized = (data_all - np.min(data_all)) / (np.max(data_all) - np.min(data_all)) * 2 - 1
@@ -92,11 +91,8 @@ for model_num in range(1):
     print()
     
     x_all, y_all = data_all_normalized[:,:x_all.shape[1]], np.squeeze(data_all_normalized[:,-1:])
-    """
     
-    #print(x_all)
     print('Input data shape:', x_all.shape)
-    #print(y_all)
     print('Output data shape:', y_all.shape)
     
     num_train = int(len(x_all) * train_split)
@@ -131,7 +127,7 @@ for model_num in range(1):
             return output_seq
     
     model = PNN()
-    optim = torch.optim.Adam(model.parameters(), lr=0.01)
+    optim = torch.optim.RMSprop(model.parameters(), lr=learning_rate, alpha=alpha, weight_decay=weight_decay, momentum=momentum)
     criterion = nn.MSELoss()
     
     x_train = torch.from_numpy(x_train).float()
@@ -170,4 +166,4 @@ for model_num in range(1):
         print('MSE: {:.4f}'.format(mse))
     
     for pred, obs in zip(y_pred, y_test):
-        print("Prediction: {}, Observation: {}".format(pred, obs))
+        print('Prediction: {}, Observation: {}'.format(pred, obs))
