@@ -82,6 +82,7 @@ for model_num in range(1):
     
     x_all, y_all = np.array(x_all), np.array(y_all)
     
+    """
     # Normalize the data to [-1, 1].
     data_all = np.concatenate((x_all, y_all.reshape(-1, 1)), axis=1)
     data_all_normalized = (data_all - np.min(data_all)) / (np.max(data_all) - np.min(data_all)) * 2 - 1
@@ -91,6 +92,7 @@ for model_num in range(1):
     print()
     
     x_all, y_all = data_all_normalized[:,:x_all.shape[1]], np.squeeze(data_all_normalized[:,-1:])
+    """
     
     #print(x_all)
     print('Input data shape:', x_all.shape)
@@ -112,25 +114,30 @@ for model_num in range(1):
     # Set up a PNN.
     
     class PNN(nn.Module):
-        def __init__(self, num_input_feat, num_out_feat, num_hid_feat):
+        def __init__(self):
             super(PNN, self).__init__()
-            self.hidden_layer = nn.Linear(num_input_feat, num_hid_feat)
-            self.output_layer = nn.Linear(num_hid_feat, num_out_feat)
-            self.rbf_layer = nn.Linear(num_out_feat, num_hid_feat, bias=False)
-    
+            self.hidden_layer1 = nn.Linear(72, 64)
+            self.hidden_layer2 = nn.Linear(64, 32)
+            self.output_layer = nn.Linear(32, 1)
+            self.rbf_layer = nn.Linear(1, 32, bias=False)
+        
         def forward(self, input_seq):
-            hidden_output = torch.sigmoid(self.hidden_layer(input_seq))
-            output_mean = self.output_layer(hidden_output)
+            hidden_output1 = torch.sigmoid(self.hidden_layer1(input_seq))
+            hidden_output2 = torch.sigmoid(self.hidden_layer2(hidden_output1))
+            output_mean = self.output_layer(hidden_output2)
             output_activation = self.rbf_layer(output_mean)
-            print(output_activation.shape)
-            print(output_mean.shape)
             output_var = torch.sum((output_activation - output_mean)**2, dim=1, keepdim=True)
             output_seq = output_mean + output_var
             return output_seq
     
-    model = PNN(num_input_feat=x_all.shape[1], num_out_feat=1, num_hid_feat=num_hid_feat)
-    optim = torch.optim.RMSprop(model.parameters(), lr=learning_rate, alpha=alpha, weight_decay=weight_decay, momentum=momentum)
+    model = PNN()
+    optim = torch.optim.Adam(model.parameters(), lr=0.01)
     criterion = nn.MSELoss()
+    
+    x_train = torch.from_numpy(x_train).float()
+    y_train = torch.from_numpy(y_train).float()
+    x_test = torch.from_numpy(x_test).float()
+    y_test = torch.from_numpy(y_test).float()
     
     # Train the model.
     
@@ -138,21 +145,29 @@ for model_num in range(1):
     start = time.time()
     
     for epoch in range(num_train_epoch):
-        print('Epoch ' + str(epoch))
-        print()
-        
-        running_loss = 0.0
-        
-        for i in range(len(x_train)):
-            optim.zero_grad()
-            input_seq = torch.from_numpy(x_train[i]).float()
-            output_seq = torch.from_numpy(np.array([y_train[i]])).float()
-            predicted_seq = model(input_seq)
-            loss = criterion(predicted_seq, output_seq)
-            loss.backward()
-            optim.step()
+
+        y_pred = model(x_train)
+        loss = criterion(y_pred, y_train)
+        optim.zero_grad()
+        loss.backward()
+        optim.step()
     
-            # accumulate loss
-            running_loss += loss.item()
-            
-        print('Epoch %d loss: %.3f' % (epoch + 1, running_loss / x_train.shape[0]))
+        if (epoch+1) % 10 == 0:
+            print ('Epoch [{}/{}], Loss: {:.4f}'.format(epoch+1, num_train_epoch, loss.item()))
+    
+    # End time
+    stop = time.time()
+    
+    print(f'Complete training. Time spent: {stop - start} seconds.')
+    print('----------')
+    print()
+    
+    # Test the model.
+    
+    with torch.no_grad():
+        y_pred = model(x_test)
+        mse = criterion(y_pred, y_test)
+        print('MSE: {:.4f}'.format(mse))
+    
+    for pred, obs in zip(y_pred, y_test):
+        print("Prediction: {}, Observation: {}".format(pred, obs))
