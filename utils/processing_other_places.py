@@ -271,7 +271,14 @@ print()
 
 nz_lats = [-34.25, -36.75, -37.25, -37.75, -38.75, -40.75, -41.25, -43.75, -43.75, -44.25, -45.75, -47.25]
 nz_lons = [172.25, 175.25, 176.75, 174.75, 174.25, 174.25, 176.25, -176.75, 173.25, 167.25, 170.75, 167.75]
-nz_locs = ['cr', 'mg', 'bop', 'r', 't', 'cs', 'w', 'ci', 'bd', 'f', 'od', 'si']
+nz_locs = ['cr', 'mg', 'bop', 'r', 't', 'cs', 'w', 'ci', 'bp', 'f', 'op', 'si']
 
 for i in range(len(nz_locs)):
     extract_y(nz_lats[i], nz_lons[i], nz_locs[i], data_path, soda, train_num_year)
+
+non_nz_lats = [-29.25, -36.25, -38.25, -40.25, -33.75, -33.75, -35.25, -35.25]
+non_nz_lons = [155.75, 152.75, 150.75, 150.75, -156.75, -159.75, -152.75, -155.75] 
+non_nz_locs = ['eau1', 'eau2', 'eau3', 'eau4', 'enc1', 'enc2', 'enc3', 'enc4']
+
+for i in range(len(non_nz_locs)):
+    extract_y(non_nz_lats[i], non_nz_lons[i], non_nz_locs[i], data_path, soda, train_num_year)
